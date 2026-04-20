@@ -11,6 +11,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script>
 tailwind.config = {
@@ -255,6 +256,10 @@ body { background:#060e1d; color:#dde5fb; }
         <button onclick="shiftPlanHorizon(6)" class="flex items-center gap-2 bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant hover:text-primary px-4 py-2 rounded-lg transition-colors">
           <span class="font-body text-xs uppercase tracking-widest">Later</span>
           <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+        </button>
+        <button onclick="exportBudgetXlsx()" class="flex items-center gap-2 bg-primary/10 border border-primary/40 hover:border-primary hover:bg-primary/20 text-primary px-4 py-2 rounded-lg transition-colors">
+          <span class="material-symbols-outlined text-[18px]">download</span>
+          <span class="font-body text-xs uppercase tracking-widest font-bold">Export .xlsx</span>
         </button>
       </div>
     </div>
@@ -1030,6 +1035,102 @@ function drawBurndown(months, planned, actual) {
       <path d="${actualPath}" fill="none" stroke="#ec4899" stroke-width="2.5" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px rgba(236,72,153,0.6))"/>
       ${actual.map((v, i) => `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3" fill="#ec4899"/>`).join('')}
     </svg>`;
+}
+
+// ════════════════════════════════════════
+//  EXCEL EXPORT
+// ════════════════════════════════════════
+function exportBudgetXlsx() {
+  if (typeof XLSX === 'undefined') {
+    alert('Excel library still loading — try again in a moment.');
+    return;
+  }
+  const cats = Object.entries(categories)
+    .filter(([,c]) => c.type === 'expense')
+    .sort((a,b) => a[1].order - b[1].order);
+
+  // ---- Sheet 1: Plan (matrix) ----
+  const months = [];
+  for (let i = 0; i < PLAN_MONTHS; i++) months.push({ key: monthKeyAt(planHorizonOffset + i), label: monthLabelAt(planHorizonOffset + i) });
+  const planHeader = ['Category', ...months.map(m => m.label), 'Row Total'];
+  const planRows = cats.map(([id, cat]) => {
+    const vals = months.map(m => planCell(id, m.key));
+    const total = vals.reduce((s, v) => s + v, 0);
+    return [cat.name, ...vals, total];
+  });
+  const colTotals = months.map((m, ci) => planRows.reduce((s, r) => s + (r[ci + 1] || 0), 0));
+  const grand = colTotals.reduce((s, v) => s + v, 0);
+  planRows.push(['Monthly Total', ...colTotals, grand]);
+  const planSheet = XLSX.utils.aoa_to_sheet([planHeader, ...planRows]);
+  // Column widths
+  planSheet['!cols'] = [{ wch: 22 }, ...months.map(() => ({ wch: 12 })), { wch: 14 }];
+
+  // ---- Sheet 2: Outlook (plan vs actual) ----
+  const outlookHeader = ['Category', 'Planned', 'Actual', 'Variance', '% Used'];
+  const outlookRows = cats.map(([id, cat]) => {
+    const p = planRowTotal(id);
+    const a = actualRowTotal(id);
+    const v = p - a;
+    const pct = p ? (a / p) * 100 : 0;
+    return [cat.name, p, a, v, pct / 100];
+  });
+  const totP = outlookRows.reduce((s, r) => s + r[1], 0);
+  const totA = outlookRows.reduce((s, r) => s + r[2], 0);
+  const totV = totP - totA;
+  const totPct = totP ? (totA / totP) : 0;
+  outlookRows.push(['TOTAL', totP, totA, totV, totPct]);
+  const outlookSheet = XLSX.utils.aoa_to_sheet([outlookHeader, ...outlookRows]);
+  outlookSheet['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 10 }];
+  // Format currency and percent columns
+  const moneyFmt = '"$"#,##0.00;[Red]-"$"#,##0.00';
+  const pctFmt = '0.0%';
+  for (let r = 2; r <= outlookRows.length + 1; r++) {
+    ['B','C','D'].forEach(c => { const cell = outlookSheet[c + r]; if (cell) cell.z = moneyFmt; });
+    const pctCell = outlookSheet['E' + r]; if (pctCell) pctCell.z = pctFmt;
+  }
+
+  // ---- Sheet 3: Transactions (raw actuals) ----
+  const txHeader = ['Date', 'Description', 'Category', 'Type', 'Amount', 'Status', 'Notes'];
+  const txRows = Object.values(transactions)
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .map(t => {
+      const cat = categories[t.categoryId] || {};
+      return [t.date || '', t.description || '', cat.name || '', cat.type || '', parseFloat(t.amount) || 0, t.status || '', t.notes || ''];
+    });
+  const txSheet = XLSX.utils.aoa_to_sheet([txHeader, ...txRows]);
+  txSheet['!cols'] = [{ wch: 12 }, { wch: 32 }, { wch: 18 }, { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 30 }];
+  for (let r = 2; r <= txRows.length + 1; r++) {
+    const cell = txSheet['E' + r]; if (cell) cell.z = moneyFmt;
+  }
+
+  // ---- Sheet 4: Summary ----
+  const seed = parseFloat(settings.seedTarget) || 0;
+  const summarySheet = XLSX.utils.aoa_to_sheet([
+    ['LUMINO Budget Export'],
+    ['Company', settings.companyName || ''],
+    ['Currency', settings.currency || 'USD'],
+    ['Fiscal Year Start', settings.fiscalYearStart || ''],
+    ['Seed Target', seed],
+    ['Generated', new Date().toLocaleString()],
+    [],
+    ['Total Planned (12-mo horizon)', grand],
+    ['Total Actual (all-time)', totA],
+    ['Variance', grand - totA],
+    ['% of Seed Target Planned', seed ? grand / seed : 0],
+  ]);
+  summarySheet['!cols'] = [{ wch: 32 }, { wch: 20 }];
+  ['B5','B8','B9','B10'].forEach(ref => { if (summarySheet[ref]) summarySheet[ref].z = moneyFmt; });
+  if (summarySheet.B11) summarySheet.B11.z = pctFmt;
+
+  // ---- Build workbook ----
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+  XLSX.utils.book_append_sheet(wb, planSheet, 'Plan');
+  XLSX.utils.book_append_sheet(wb, outlookSheet, 'Outlook');
+  XLSX.utils.book_append_sheet(wb, txSheet, 'Transactions');
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `lumino-budget-${stamp}.xlsx`);
 }
 
 // ════════════════════════════════════════
