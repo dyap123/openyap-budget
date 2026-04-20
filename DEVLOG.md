@@ -1,4 +1,58 @@
-# LUMINO Devlog
+# FORMWORK Devlog
+
+## 2026-04-20 — Formwork rebrand, line items, Compare view, 3D lattice
+
+Full overhaul of the OpenYap Budget app. Name retired from `Lumino` → `Formwork` (construction-native: the mold concrete is poured into — the structure that shapes every dollar). Planning goes deeper, comparison goes wider, the whole thing sits on a live WebGL stage.
+
+### Rebrand
+- All `LUMINO` strings swapped for `FORMWORK` (title, sidebar wordmark, breadcrumb, export headers, filenames)
+- Sidebar icon: `lightbulb` → `grid_view`; added faint 3×3 lattice motif behind the wordmark
+- Export filename: `lumino-budget-*.xlsx` → `formwork-budget-*.xlsx`
+
+### Line-item planning (per-category drill-in)
+- New Firebase path: `budget/planItems/{catId}/{itemId}` → `{ name, amount, month, status, notes, order, ts }`
+- Legacy `budget/plan/{catId}/{YYYY-MM}` preserved. `planCell()` now sums line items when present and falls back to the legacy number otherwise
+- Click any category row in Plan (or a category card in Dashboard/Nodes, or a row in Outlook/Compare) → right-side slide-in panel (520px glass) with: summary strip, month filter, inline-editable items table, add/delete, cumulative planned-vs-actual sparkline
+- Plan matrix cells with items are non-editable and show a dot indicator; click to drill in. Direct edit on an item-backed cell prompts before overwriting
+- Statuses: `planned` / `committed` / `done` with matching color pills
+
+### Compare view (new top-level tab)
+- Four tiles: bays, line items, total planned, over-plan count
+- Stacked-area "Plan Flow" — one layer per category, full 12-month horizon, with legend
+- Sortable Category-vs-Category table: planned, actual, var $, var %, % used bar, item count, biggest line item
+- Flat cross-category line-items list with filters (name/notes text, status, category) and sortable columns
+
+### Three.js immersion
+- Fixed full-viewport ambient canvas behind everything: gradient-noise shader mesh + 120 drifting accent particles + slow-rotating wireframe octahedron. 45 fps cap, pauses on `visibilitychange`, disabled when reduced-motion toggle is on
+- Nodes view: flat HTML orbit replaced with a 3D formwork lattice. Each category is a wireframe rectangular prism (a formwork bay) arranged on a spiral hemisphere, sized ∝ planned total. Actual spend pours in as a translucent fill inside the bay. Line items = glowing studs. Hover → floating tooltip with planned/actual/item-count. Click → drill-in panel
+- Dashboard topology: small embedded Three.js scene — same lattice, auto-rotating
+
+### Dashboard additions
+- Plan Health card: over-plan count + no-items count
+- Next 30 Days card: sum of open line items (status ≠ done) due in the next 30 days
+
+### Settings additions
+- Accent picker: cyan / violet / amber — writes `settings.accent` and updates every CSS `var(--accent)` plus WebGL colors live
+- Reduced-motion toggle: kills the ambient canvas, disables rotations, honors `prefers-reduced-motion`
+
+### Data model (final)
+
+```
+budget/
+  categories/{catId}        → { name, type, icon, color, order }
+  transactions/{txId}       → { description, amount, date, categoryId, status, notes, ts }
+  plan/{catId}/{YYYY-MM}    → amount (legacy, still read)
+  planItems/{catId}/{itemId}→ { name, amount, month, status, notes, order, ts }
+  settings                  → { companyName, currency, fiscalYearStart, seedTarget, accent, reducedMotion }
+```
+
+### Tech notes
+- Still single-file. `~/openyap-budget/index.html` now ~1600 lines
+- Three.js r160 via CDN (one tag, no build)
+- Two independent WebGL contexts: global ambient + Nodes lattice + Dashboard mini. All dispose-safe, all pixel-ratio clamped to 2
+- Keeps Firebase RTDB as sole source of truth; no Sheets integration (unlike CUP)
+
+---
 
 ## 2026-04-19 — Plan, Outlook, Excel export
 
