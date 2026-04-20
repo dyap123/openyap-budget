@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LUMINO — OpenYap Budget Intelligence</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "outline": "#6d7589",
+        "outline-variant": "#40485a",
+        "tertiary-container": "#9c42f4",
+        "on-primary": "#005d63",
+        "tertiary": "#bf81ff",
+        "surface-variant": "#1a263c",
+        "surface-container-highest": "#1a263c",
+        "primary-fixed-dim": "#00deec",
+        "on-surface": "#dde5fb",
+        "surface-container-high": "#152034",
+        "error": "#ff716c",
+        "primary": "#8ff5ff",
+        "tertiary-dim": "#9c42f4",
+        "error-dim": "#d7383b",
+        "surface-bright": "#1f2c44",
+        "secondary": "#8596ff",
+        "on-surface-variant": "#a3abc0",
+        "on-background": "#dde5fb",
+        "secondary-dim": "#4963ff",
+        "background": "#060e1d",
+        "primary-container": "#00eefc",
+        "on-secondary": "#001269",
+        "surface-tint": "#8ff5ff",
+        "primary-fixed": "#00eefc",
+        "primary-dim": "#00deec",
+        "surface-dim": "#060e1d",
+        "surface-container-lowest": "#000000",
+        "surface-container": "#0f192c",
+        "surface": "#060e1d",
+        "surface-container-low": "#0a1324",
+        "error-container": "#9f0519",
+        "secondary-container": "#0b35e1",
+        "inverse-surface": "#f9f9ff"
+      },
+      borderRadius: { DEFAULT:"0.125rem", lg:"0.25rem", xl:"0.5rem", full:"0.75rem" },
+      fontFamily: { headline:["Manrope","sans-serif"], body:["Inter","sans-serif"], label:["Inter","sans-serif"] }
+    }
+  }
+};
+</script>
+<style>
+body { background:#060e1d; color:#dde5fb; }
+.glass { background:rgba(26,38,60,0.6); backdrop-filter:blur(20px); }
+.glow-box { box-shadow:0 20px 40px rgba(0,0,0,0.4),0 0 15px rgba(143,245,255,0.05); }
+.glow-btn { background:linear-gradient(135deg,#8ff5ff 0%,#00eefc 100%); color:#005d63; }
+.glow-btn:hover { box-shadow:0 0 15px rgba(143,245,255,0.4); }
+.glow-text { text-shadow:0 0 10px rgba(143,245,255,0.4); }
+.bg-grid { background-image:linear-gradient(to right,rgba(64,72,90,0.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(64,72,90,0.05) 1px,transparent 1px); background-size:40px 40px; }
+.view { display:none; }
+.view.active { display:flex; }
+.nav-item { display:flex; align-items:center; gap:1rem; padding:0.75rem 1.5rem; color:#a3abc0; transition:all 0.2s; cursor:pointer; font-size:0.875rem; }
+.nav-item:hover { color:#8ff5ff; background:#152034; }
+.nav-item.active { color:#8ff5ff; border-left:2px solid #8ff5ff; background:linear-gradient(to right,rgba(143,245,255,0.1),transparent); font-weight:700; }
+.status-processed { background:rgba(143,245,255,0.1); color:#8ff5ff; border-left:2px solid #8ff5ff; }
+.status-pending { background:rgba(26,38,60,1); color:#a3abc0; border-left:2px solid #40485a; }
+.status-flagged { background:rgba(255,113,108,0.1); color:#ff716c; border-left:2px solid #ff716c; }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:100; display:none; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+@media(max-width:768px) { nav.sidebar { display:none; } main.content { margin-left:0 !important; } }
+</style>
+</head>
+<body class="font-body antialiased min-h-screen flex overflow-hidden selection:bg-primary/30 selection:text-primary">
+
+<!-- Sidebar -->
+<nav class="sidebar h-screen w-72 fixed left-0 top-0 bg-[#0a1324]/80 backdrop-blur-2xl shadow-[20px_0_40px_rgba(0,0,0,0.4),0_0_15px_rgba(143,245,255,0.05)] z-50 flex flex-col py-10">
+  <div class="bg-gradient-to-r from-transparent via-[#40485a]/10 to-transparent w-[1px] h-full absolute right-0 top-0"></div>
+  <!-- Brand -->
+  <div class="px-8 mb-16 flex items-center gap-4">
+    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-[0_0_15px_rgba(143,245,255,0.3)]">
+      <span class="material-symbols-outlined text-on-primary" style="font-variation-settings:'FILL' 1">lightbulb</span>
+    </div>
+    <div>
+      <h1 class="text-3xl font-black tracking-tighter text-[#00F0FF] drop-shadow-[0_0_10px_rgba(0,240,255,0.4)] font-headline">LUMINO</h1>
+      <p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mt-1">OpenYap Budget</p>
+    </div>
+  </div>
+  <!-- Nav -->
+  <ul class="flex flex-col w-full flex-1">
+    <li><a class="nav-item active" onclick="switchView('dashboard')" data-view="dashboard">
+      <span class="material-symbols-outlined text-[20px]">dashboard</span>
+      <span class="font-headline tracking-tight">Dashboard</span>
+    </a></li>
+    <li><a class="nav-item" onclick="switchView('expenses')" data-view="expenses">
+      <span class="material-symbols-outlined text-[20px]">payments</span>
+      <span class="font-headline tracking-tight">Expenses</span>
+    </a></li>
+    <li><a class="nav-item" onclick="switchView('nodes')" data-view="nodes">
+      <span class="material-symbols-outlined text-[20px]">account_tree</span>
+      <span class="font-headline tracking-tight">Nodes</span>
+    </a></li>
+    <li><a class="nav-item" onclick="switchView('settings')" data-view="settings">
+      <span class="material-symbols-outlined text-[20px]">settings</span>
+      <span class="font-headline tracking-tight">Settings</span>
+    </a></li>
+  </ul>
+  <!-- Footer -->
+  <div class="px-6 mt-auto">
+    <div class="h-[1px] w-full bg-outline-variant/15 mb-6"></div>
+    <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-container-highest/50 border border-outline-variant/15">
+      <div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center">
+        <span class="material-symbols-outlined text-on-surface-variant text-sm">business</span>
+      </div>
+      <div>
+        <div class="font-headline text-xs font-bold text-on-surface">OpenYap AI LLC</div>
+        <div class="font-body text-[10px] text-on-surface-variant">Startup Budget</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="content ml-72 flex-1 relative h-screen overflow-y-auto flex flex-col">
+  <!-- Top Bar -->
+  <header class="w-full h-20 sticky top-0 z-40 bg-transparent backdrop-blur-sm border-b border-outline-variant/5 flex justify-between items-center px-12">
+    <div class="flex items-center gap-2 text-on-surface-variant text-sm font-body">
+      <span>LUMINO</span>
+      <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+      <span class="text-primary font-bold" id="breadcrumb">Dashboard</span>
+    </div>
+    <div class="flex items-center gap-6">
+      <div class="relative group">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-sm group-hover:text-primary transition-colors">search</span>
+        <input class="bg-transparent border-b border-outline-variant/30 text-on-surface font-body tracking-[0.1em] text-[10px] uppercase py-2 pl-9 pr-4 w-64 focus:outline-none focus:border-primary transition-all placeholder:text-outline-variant" placeholder="SEARCH TRANSACTIONS..." id="globalSearch" oninput="filterTable(this.value)" type="text"/>
+      </div>
+      <button class="text-[#a3abc0] hover:text-[#00F0FF] transition-colors relative">
+        <span class="material-symbols-outlined text-xl">notifications_active</span>
+      </button>
+      <button class="text-[#a3abc0] hover:text-[#00F0FF] transition-colors">
+        <span class="material-symbols-outlined text-xl">account_circle</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════ DASHBOARD VIEW ═══════════════ -->
+  <div class="view active flex-col p-12 gap-16 max-w-[1600px] mx-auto w-full" id="v-dashboard">
+    <!-- Header -->
+    <div>
+      <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_#8ff5ff]"></span>
+        Live Data Feed
+      </p>
+      <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Budget <span class="text-primary glow-text">Intelligence</span></h2>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="kpiCards">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Network Topology -->
+    <section class="bg-surface-container-low rounded-xl p-10 glow-box relative min-h-[500px] flex items-center justify-center overflow-hidden">
+      <div class="absolute inset-0 bg-grid opacity-50"></div>
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,238,252,0.05)_0%,transparent_70%)]"></div>
+      <h3 class="absolute top-10 left-10 font-body text-sm uppercase tracking-widest text-on-surface-variant z-20">Budget Topology</h3>
+      <div class="relative z-10 w-full h-full" id="dashTopology">
+        <!-- Filled by JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════ EXPENSES VIEW ═══════════════ -->
+  <div class="view flex-col p-12 gap-16 max-w-[1600px] mx-auto w-full" id="v-expenses">
+    <div class="flex justify-between items-end">
+      <div>
+        <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_#8ff5ff]"></span>
+          Live Data Feed
+        </p>
+        <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Budget Overview</h2>
+      </div>
+      <div class="flex gap-4">
+        <button onclick="exportExcel()" class="px-6 py-3 border border-outline-variant/30 text-on-surface-variant font-label text-xs uppercase tracking-widest hover:border-primary hover:text-primary transition-all rounded-full flex items-center gap-2 bg-surface-container/50 backdrop-blur-md">
+          <span class="material-symbols-outlined text-sm">download</span> Export Log
+        </button>
+        <button onclick="openModal()" class="px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold font-label text-xs uppercase tracking-widest rounded-full shadow-[0_10px_20px_rgba(0,238,252,0.2)] hover:shadow-[0_10px_30px_rgba(0,238,252,0.4)] hover:scale-[1.02] transition-all flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">add</span> New Allocation
+        </button>
+      </div>
+    </div>
+
+    <!-- Transaction Ledger -->
+    <div class="bg-surface-container-low rounded-xl border border-outline-variant/15 p-8 glow-box backdrop-blur-xl relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+      <div class="flex justify-between items-end mb-8">
+        <div>
+          <h3 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Transaction Ledger</h3>
+          <p class="text-on-surface-variant text-sm mt-1">All budget allocations and expenses.</p>
+        </div>
+        <div class="relative">
+          <input class="bg-transparent border-b border-outline-variant/50 text-sm text-on-surface py-2 pl-2 pr-8 focus:outline-none focus:border-primary transition-all w-64 placeholder:text-outline-variant" placeholder="Filter..." id="tableFilter" oninput="filterTable(this.value)" type="text"/>
+          <span class="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-outline-variant text-sm">filter_list</span>
+        </div>
+      </div>
+      <div class="w-full overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-outline-variant/15 text-on-surface-variant font-label text-[10px] uppercase tracking-[0.15em]">
+              <th class="pb-4 font-semibold w-[30%]">Entity / Node</th>
+              <th class="pb-4 font-semibold w-[20%]">Category</th>
+              <th class="pb-4 font-semibold w-[15%]">Date</th>
+              <th class="pb-4 font-semibold w-[15%]">Status</th>
+              <th class="pb-4 font-semibold text-right w-[15%]">Amount</th>
+              <th class="pb-4 font-semibold text-right w-[5%]"></th>
+            </tr>
+          </thead>
+          <tbody id="txBody" class="text-sm font-body">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ NODES VIEW ═══════════════ -->
+  <div class="view flex-col p-12 gap-8 max-w-[1600px] mx-auto w-full" id="v-nodes">
+    <div>
+      <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">System <span class="text-primary glow-text">Nodes</span></h2>
+      <p class="text-on-surface-variant text-lg mt-2">Category breakdown with allocation flow.</p>
+    </div>
+    <!-- Node Canvas -->
+    <div class="relative w-full min-h-[600px] bg-surface-container-lowest rounded-xl overflow-hidden glow-box border border-outline-variant/10">
+      <div class="absolute inset-0 bg-grid opacity-50"></div>
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,238,252,0.05)_0%,transparent_70%)]"></div>
+      <svg class="absolute inset-0 w-full h-full pointer-events-none z-0" id="nodeSvg">
+        <defs>
+          <linearGradient id="glowLine" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8ff5ff" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#40485a" stop-opacity="0.2"/>
+          </linearGradient>
+          <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+      </svg>
+      <div id="nodeContainer" class="relative z-10 w-full h-full" style="min-height:600px"></div>
+      <!-- Controls -->
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-surface-container-high/80 backdrop-blur-xl border border-outline-variant/20 rounded-full px-4 py-2 flex items-center gap-6 shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-30">
+        <button onclick="openModal()" class="flex items-center gap-2 text-primary hover:text-primary-container transition-colors">
+          <span class="material-symbols-outlined text-[18px]">add_circle</span>
+          <span class="font-body text-[10px] uppercase tracking-widest font-bold">New Node</span>
+        </button>
+      </div>
+    </div>
+    <!-- Category Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="catCards"></div>
+  </div>
+
+  <!-- ═══════════════ SETTINGS VIEW ═══════════════ -->
+  <div class="view flex-col p-12 gap-8 max-w-6xl mx-auto w-full" id="v-settings">
+    <div class="mb-8">
+      <h2 class="font-headline text-[3.5rem] leading-none tracking-tight font-bold text-on-surface mb-4">Configuration</h2>
+      <p class="font-body text-on-surface-variant text-lg">Manage your budget environment and export preferences.</p>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-1 space-y-2">
+        <button class="w-full text-left px-6 py-4 bg-surface-container-high rounded-xl text-primary font-headline font-bold flex items-center gap-3 glow-box border-l-2 border-primary">
+          <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">manage_accounts</span> Company Details
+        </button>
+        <button class="w-full text-left px-6 py-4 bg-transparent hover:bg-surface-container-low rounded-xl text-on-surface-variant font-headline flex items-center gap-3 transition-colors">
+          <span class="material-symbols-outlined">savings</span> Budget Targets
+        </button>
+        <button class="w-full text-left px-6 py-4 bg-transparent hover:bg-surface-container-low rounded-xl text-on-surface-variant font-headline flex items-center gap-3 transition-colors">
+          <span class="material-symbols-outlined">download</span> Export & Backup
+        </button>
+      </div>
+      <div class="lg:col-span-2 space-y-8">
+        <!-- Company Form -->
+        <div class="bg-surface-container-low rounded-xl p-8 border border-outline-variant/15">
+          <h3 class="font-headline text-xl font-bold text-on-surface mb-8 border-b border-outline-variant/15 pb-4">Company Information</h3>
+          <div class="space-y-6">
+            <div class="flex flex-col gap-2">
+              <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Company Name</label>
+              <input id="sCompany" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full transition-all" type="text" value="OpenYap AI LLC"/>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Currency</label>
+              <input id="sCurrency" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full transition-all" type="text" value="USD"/>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Seed Target</label>
+              <input id="sSeed" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full transition-all" type="number" value="1200000"/>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Fiscal Year Start</label>
+              <input id="sFiscal" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full transition-all" type="text" value="2026-01"/>
+            </div>
+          </div>
+          <div class="mt-10 flex justify-end gap-4">
+            <button class="px-6 py-2 rounded font-headline font-bold text-on-surface border border-outline-variant/30 hover:border-outline-variant transition-colors bg-transparent text-sm">Discard</button>
+            <button onclick="saveSettings()" class="px-6 py-2 rounded font-headline font-bold glow-btn text-sm">Save Changes</button>
+          </div>
+        </div>
+        <!-- Quick Export -->
+        <div class="bg-surface-container-low rounded-xl p-8 border border-outline-variant/15 relative overflow-hidden">
+          <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+          <div class="flex items-center justify-between relative z-10">
+            <div>
+              <h3 class="font-headline text-2xl font-bold text-on-surface flex items-center gap-2 mb-2">
+                <span class="material-symbols-outlined text-primary">download</span> Export Budget
+              </h3>
+              <p class="font-body text-on-surface-variant text-sm">Download full budget as Excel workbook.</p>
+            </div>
+            <button onclick="exportExcel()" class="px-6 py-3 glow-btn rounded-full font-headline font-bold text-sm">Export .xlsx</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ═══════════════ ADD/EDIT MODAL ═══════════════ -->
+<div class="modal-overlay" id="txModal">
+  <div class="glass rounded-xl p-8 w-full max-w-lg border border-outline-variant/20 glow-box relative">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-outline-variant hover:text-on-surface transition-colors">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <h3 class="font-headline text-2xl font-bold text-on-surface mb-6" id="modalTitle">New Allocation</h3>
+    <div class="space-y-5">
+      <input type="hidden" id="txEditId" value=""/>
+      <div class="flex flex-col gap-1">
+        <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Description</label>
+        <input id="txDesc" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full" type="text" placeholder="e.g. LLC Filing Fee"/>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Amount ($)</label>
+          <input id="txAmount" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full" type="number" step="0.01" placeholder="0.00"/>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Date</label>
+          <input id="txDate" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full" type="date"/>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Category</label>
+          <select id="txCat" class="bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full"></select>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Status</label>
+          <select id="txStatus" class="bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full">
+            <option value="processed">Processed</option>
+            <option value="pending">Pending</option>
+            <option value="flagged">Flagged</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Type</label>
+        <select id="txType" class="bg-surface-container border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-semibold">Notes</label>
+        <input id="txNotes" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full" type="text" placeholder="Optional"/>
+      </div>
+    </div>
+    <div class="mt-8 flex justify-end gap-4">
+      <button onclick="closeModal()" class="px-6 py-2 rounded font-headline font-bold text-on-surface border border-outline-variant/30 hover:border-outline-variant transition-colors bg-transparent text-sm">Cancel</button>
+      <button onclick="saveTx()" class="px-6 py-2 rounded font-headline font-bold glow-btn text-sm">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  FIREBASE
+// ════════════════════════════════════════
+const DB_URL = 'https://gen-lang-client-0119642855-default-rtdb.firebaseio.com';
+firebase.initializeApp({ databaseURL: DB_URL });
+const db = firebase.database();
+
+// Firebase helpers
+function fbSet(path, val) { return db.ref(path).set(val); }
+function fbPush(path, val) { return db.ref(path).push(val); }
+function fbRemove(path) { return db.ref(path).remove(); }
+function fbListen(path, cb) { db.ref(path).on('value', snap => cb(snap.val())); }
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let categories = {};
+let transactions = {};
+let settings = { currency:'USD', fiscalYearStart:'2026-01', companyName:'OpenYap AI LLC', seedTarget:1200000 };
+let currentView = 'dashboard';
+
+const DEFAULT_CATS = {
+  llc:    { name:'LLC Formation',   type:'expense', icon:'gavel',       color:'#8ff5ff', order:0 },
+  legal:  { name:'Legal',           type:'expense', icon:'policy',      color:'#ff716c', order:1 },
+  infra:  { name:'Infrastructure',  type:'expense', icon:'dns',         color:'#bf81ff', order:2 },
+  dev:    { name:'Development',     type:'expense', icon:'code',        color:'#8596ff', order:3 },
+  mkt:    { name:'Marketing',       type:'expense', icon:'campaign',    color:'#00deec', order:4 },
+  ops:    { name:'Operations',      type:'expense', icon:'settings',    color:'#6d7589', order:5 },
+  rev:    { name:'Revenue',         type:'income',  icon:'trending_up', color:'#00eefc', order:6 },
+  invest: { name:'Investment',      type:'income',  icon:'savings',     color:'#4963ff', order:7 },
+};
+
+// ════════════════════════════════════════
+//  VIEW SWITCHING
+// ════════════════════════════════════════
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('v-' + v).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === v);
+    const icon = el.querySelector('.material-symbols-outlined');
+    icon.style.fontVariationSettings = el.dataset.view === v ? "'FILL' 1" : "'FILL' 0";
+  });
+  document.getElementById('breadcrumb').textContent = v.charAt(0).toUpperCase() + v.slice(1);
+  if (v === 'nodes') renderNodes();
+  if (v === 'dashboard') renderDashTopology();
+}
+
+// ════════════════════════════════════════
+//  INIT & LISTENERS
+// ════════════════════════════════════════
+fbListen('budget/categories', data => {
+  if (!data || Object.keys(data).length === 0) {
+    // Seed default categories
+    fbSet('budget/categories', DEFAULT_CATS);
+    return;
+  }
+  categories = data;
+  populateCatSelect();
+  renderAll();
+});
+
+fbListen('budget/transactions', data => {
+  transactions = data || {};
+  renderAll();
+});
+
+fbListen('budget/settings', data => {
+  if (data) {
+    settings = { ...settings, ...data };
+    document.getElementById('sCompany').value = settings.companyName || '';
+    document.getElementById('sCurrency').value = settings.currency || 'USD';
+    document.getElementById('sSeed').value = settings.seedTarget || 1200000;
+    document.getElementById('sFiscal').value = settings.fiscalYearStart || '2026-01';
+  }
+});
+
+function renderAll() {
+  renderKPIs();
+  renderTable();
+  renderCatCards();
+  if (currentView === 'nodes') renderNodes();
+  if (currentView === 'dashboard') renderDashTopology();
+}
+
+// ════════════════════════════════════════
+//  KPI CARDS
+// ════════════════════════════════════════
+function renderKPIs() {
+  const txArr = Object.values(transactions);
+  const totalExpense = txArr.filter(t => (categories[t.categoryId]||{}).type === 'expense').reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+  const totalIncome = txArr.filter(t => (categories[t.categoryId]||{}).type === 'income').reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+  const net = totalIncome - totalExpense;
+
+  // Monthly burn (expenses in last 30 days)
+  const now = Date.now();
+  const recent = txArr.filter(t => {
+    const cat = categories[t.categoryId] || {};
+    if (cat.type !== 'expense') return false;
+    const d = new Date(t.date).getTime();
+    return (now - d) < 30 * 86400000;
+  });
+  const monthlyBurn = recent.reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+  const runway = monthlyBurn > 0 ? Math.round((settings.seedTarget - totalExpense) / monthlyBurn) : '∞';
+
+  const fmt = n => {
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+    return '$' + n.toFixed(0);
+  };
+
+  document.getElementById('kpiCards').innerHTML = `
+    <div class="bg-surface-container-low rounded-xl p-8 glow-box relative overflow-hidden group">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors"></div>
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-body text-sm uppercase tracking-widest text-on-surface-variant">Total Spent</span>
+        <span class="material-symbols-outlined text-primary">account_balance</span>
+      </div>
+      <div class="flex items-end gap-3">
+        <span class="font-headline text-5xl font-light text-on-surface">${fmt(totalExpense)}</span>
+      </div>
+      <div class="mt-2 text-xs text-on-surface-variant">of ${fmt(settings.seedTarget)} seed target</div>
+    </div>
+    <div class="bg-surface-container rounded-xl p-8 glow-box relative overflow-hidden group border-l-2 border-primary">
+      <div class="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-body text-sm uppercase tracking-widest text-on-surface-variant">Monthly Burn</span>
+        <span class="material-symbols-outlined text-primary">local_fire_department</span>
+      </div>
+      <div class="flex items-end gap-3">
+        <span class="font-headline text-5xl font-light text-primary glow-text">${fmt(monthlyBurn)}</span>
+      </div>
+      <div class="mt-2 text-xs text-on-surface-variant">${txArr.length} total transactions</div>
+    </div>
+    <div class="bg-surface-container-low rounded-xl p-8 glow-box relative overflow-hidden group">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-colors"></div>
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-body text-sm uppercase tracking-widest text-on-surface-variant">Runway</span>
+        <span class="material-symbols-outlined text-tertiary">speed</span>
+      </div>
+      <div class="flex items-end gap-3">
+        <span class="font-headline text-5xl font-light text-on-surface">${runway}<span class="text-2xl text-on-surface-variant ml-1">mo</span></span>
+      </div>
+      <div class="mt-2 text-xs text-on-surface-variant">at current burn rate</div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════
+//  TRANSACTION TABLE
+// ════════════════════════════════════════
+function renderTable(filter) {
+  const tbody = document.getElementById('txBody');
+  const txArr = Object.entries(transactions).sort((a,b) => (b[1].date||'').localeCompare(a[1].date||''));
+  const q = (filter || '').toLowerCase();
+
+  tbody.innerHTML = txArr.filter(([id, t]) => {
+    if (!q) return true;
+    const cat = categories[t.categoryId] || {};
+    return t.description.toLowerCase().includes(q) || (cat.name||'').toLowerCase().includes(q);
+  }).map(([id, t]) => {
+    const cat = categories[t.categoryId] || { name:'Uncategorized', icon:'help', color:'#6d7589' };
+    const statusCls = t.status === 'processed' ? 'status-processed' : t.status === 'flagged' ? 'status-flagged' : 'status-pending';
+    const txId = 'TX-' + id.slice(-6).toUpperCase();
+    const isIncome = cat.type === 'income';
+    return `
+      <tr class="border-b border-outline-variant/5 hover:bg-surface-variant/30 transition-colors group">
+        <td class="py-5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center border border-outline-variant/20 group-hover:border-primary/50 transition-colors">
+              <span class="material-symbols-outlined text-sm" style="color:${cat.color}">${cat.icon}</span>
+            </div>
+            <div>
+              <p class="text-on-surface font-medium">${t.description}</p>
+              <p class="text-[10px] text-on-surface-variant tracking-wider font-mono">${txId}</p>
+            </div>
+          </div>
+        </td>
+        <td class="py-5 text-on-surface-variant">${cat.name}</td>
+        <td class="py-5 text-on-surface-variant text-xs">${t.date || '—'}</td>
+        <td class="py-5"><span class="${statusCls} text-[10px] px-2 py-1 uppercase tracking-wider font-bold">${t.status || 'pending'}</span></td>
+        <td class="py-5 text-right">
+          <p class="font-headline font-bold text-lg ${isIncome ? 'text-primary' : 'text-on-surface'}">${isIncome ? '+' : '-'}$${parseFloat(t.amount||0).toLocaleString('en-US',{minimumFractionDigits:2})}</p>
+        </td>
+        <td class="py-5 text-right">
+          <button onclick="editTx('${id}')" class="text-outline-variant hover:text-primary transition-colors mr-2"><span class="material-symbols-outlined text-sm">edit</span></button>
+          <button onclick="deleteTx('${id}')" class="text-outline-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-sm">delete</span></button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function filterTable(q) { renderTable(q); }
+
+// ════════════════════════════════════════
+//  CATEGORY CARDS (Nodes view)
+// ════════════════════════════════════════
+function renderCatCards() {
+  const el = document.getElementById('catCards');
+  const txArr = Object.values(transactions);
+  el.innerHTML = Object.entries(categories).sort((a,b) => a[1].order - b[1].order).map(([id, cat]) => {
+    const total = txArr.filter(t => t.categoryId === id).reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+    const count = txArr.filter(t => t.categoryId === id).length;
+    return `
+      <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/15 hover:border-primary/30 transition-colors group">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="material-symbols-outlined text-lg" style="color:${cat.color}">${cat.icon}</span>
+          <span class="font-headline text-sm font-bold text-on-surface">${cat.name}</span>
+        </div>
+        <div class="font-headline text-2xl font-light text-on-surface">$${total.toLocaleString('en-US',{minimumFractionDigits:0})}</div>
+        <div class="text-[10px] text-on-surface-variant mt-1">${count} transaction${count!==1?'s':''}</div>
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+//  NODE TOPOLOGY (SVG + HTML nodes)
+// ════════════════════════════════════════
+function renderNodes() {
+  const container = document.getElementById('nodeContainer');
+  const svg = document.getElementById('nodeSvg');
+  const txArr = Object.values(transactions);
+  const catArr = Object.entries(categories).sort((a,b) => a[1].order - b[1].order);
+  const totalSpent = txArr.reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+
+  // Clear
+  container.innerHTML = '';
+  // Clear SVG lines (keep defs)
+  svg.querySelectorAll('line').forEach(l => l.remove());
+
+  const cx = 50, cy = 50; // center %
+
+  // Central hub
+  container.innerHTML += `
+    <div class="absolute top-[${cy}%] left-[${cx}%] -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full bg-surface-container-low/80 backdrop-blur-xl border border-primary/40 flex flex-col items-center justify-center shadow-[0_0_50px_rgba(143,245,255,0.15),inset_0_0_20px_rgba(143,245,255,0.05)] z-20">
+      <span class="material-symbols-outlined text-primary mb-2 text-3xl opacity-80">account_balance_wallet</span>
+      <p class="font-label text-on-surface-variant text-[10px] uppercase tracking-widest mb-1">Total Budget</p>
+      <p class="font-headline text-3xl font-extrabold text-on-surface tracking-tighter">$${totalSpent >= 1e6 ? (totalSpent/1e6).toFixed(1)+'M' : totalSpent >= 1e3 ? (totalSpent/1e3).toFixed(1)+'K' : totalSpent.toFixed(0)}</p>
+    </div>`;
+
+  // Position satellites in a circle
+  const n = catArr.length;
+  catArr.forEach(([id, cat], i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const rx = 35, ry = 35;
+    const nx = cx + rx * Math.cos(angle);
+    const ny = cy + ry * Math.sin(angle);
+    const catTotal = txArr.filter(t => t.categoryId === id).reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+    const size = Math.max(80, Math.min(140, 80 + (catTotal / Math.max(totalSpent,1)) * 200));
+    const isOver = catTotal > (totalSpent / n) * 1.5;
+
+    // SVG line
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', cx+'%'); line.setAttribute('y1', cy+'%');
+    line.setAttribute('x2', nx+'%'); line.setAttribute('y2', ny+'%');
+    line.setAttribute('stroke', catTotal > 0 ? cat.color : '#40485a');
+    line.setAttribute('stroke-width', catTotal > 0 ? '1.5' : '0.5');
+    line.setAttribute('stroke-opacity', catTotal > 0 ? '0.6' : '0.3');
+    if (catTotal === 0) line.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(line);
+
+    container.innerHTML += `
+      <div class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-surface-container-high/60 backdrop-blur-md border ${isOver ? 'border-2 border-error' : 'border border-outline-variant/30'} flex flex-col items-center justify-center z-10 hover:scale-105 transition-transform cursor-pointer"
+           style="top:${ny}%;left:${nx}%;width:${size}px;height:${size}px">
+        ${isOver ? '<div class="absolute -top-1 -right-1 w-3 h-3 bg-error rounded-full animate-pulse shadow-[0_0_8px_#ff716c]"></div>' : ''}
+        <p class="font-label text-[9px] uppercase tracking-widest mb-1" style="color:${cat.color}">${cat.name}</p>
+        <p class="font-headline text-base font-bold text-on-surface">$${catTotal >= 1e3 ? (catTotal/1e3).toFixed(1)+'K' : catTotal.toFixed(0)}</p>
+      </div>`;
+  });
+}
+
+function renderDashTopology() {
+  // Reuse nodes view inside dashboard
+  const container = document.getElementById('dashTopology');
+  const txArr = Object.values(transactions);
+  const catArr = Object.entries(categories).sort((a,b) => a[1].order - b[1].order);
+  const totalSpent = txArr.reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+
+  container.innerHTML = '';
+  const cx = 50, cy = 50;
+  container.innerHTML += `
+    <div class="absolute top-[${cy}%] left-[${cx}%] -translate-x-1/2 -translate-y-1/2 w-44 h-44 rounded-full bg-surface-container-low/80 backdrop-blur-xl border border-primary/40 flex flex-col items-center justify-center shadow-[0_0_50px_rgba(143,245,255,0.15)] z-20">
+      <span class="material-symbols-outlined text-primary mb-1 text-2xl">account_balance_wallet</span>
+      <p class="font-label text-on-surface-variant text-[9px] uppercase tracking-widest">Total</p>
+      <p class="font-headline text-2xl font-extrabold text-on-surface">$${totalSpent >= 1e6 ? (totalSpent/1e6).toFixed(1)+'M' : totalSpent >= 1e3 ? (totalSpent/1e3).toFixed(1)+'K' : totalSpent.toFixed(0)}</p>
+    </div>`;
+
+  const n = catArr.length;
+  catArr.forEach(([id, cat], i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const nx = cx + 33 * Math.cos(angle);
+    const ny = cy + 33 * Math.sin(angle);
+    const catTotal = txArr.filter(t => t.categoryId === id).reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+    container.innerHTML += `
+      <div class="absolute -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-surface-container/60 backdrop-blur-sm border border-outline-variant/30 flex flex-col items-center justify-center z-10 hover:border-primary/50 transition-colors cursor-pointer"
+           style="top:${ny}%;left:${nx}%">
+        <p class="font-label text-[8px] uppercase tracking-widest text-on-surface-variant">${cat.name.split(' ')[0]}</p>
+        <p class="font-headline text-xs font-bold text-on-surface">$${catTotal >= 1e3 ? (catTotal/1e3).toFixed(0)+'K' : catTotal.toFixed(0)}</p>
+      </div>`;
+  });
+}
+
+// ════════════════════════════════════════
+//  MODAL & CRUD
+// ════════════════════════════════════════
+function populateCatSelect() {
+  const sel = document.getElementById('txCat');
+  sel.innerHTML = Object.entries(categories).sort((a,b) => a[1].order - b[1].order)
+    .map(([id, c]) => `<option value="${id}">${c.name}</option>`).join('');
+}
+
+function openModal(editId) {
+  const m = document.getElementById('txModal');
+  m.classList.add('show');
+  if (editId && transactions[editId]) {
+    const t = transactions[editId];
+    document.getElementById('modalTitle').textContent = 'Edit Allocation';
+    document.getElementById('txEditId').value = editId;
+    document.getElementById('txDesc').value = t.description || '';
+    document.getElementById('txAmount').value = t.amount || '';
+    document.getElementById('txDate').value = t.date || '';
+    document.getElementById('txCat').value = t.categoryId || '';
+    document.getElementById('txStatus').value = t.status || 'pending';
+    document.getElementById('txType').value = (categories[t.categoryId]||{}).type || 'expense';
+    document.getElementById('txNotes').value = t.notes || '';
+  } else {
+    document.getElementById('modalTitle').textContent = 'New Allocation';
+    document.getElementById('txEditId').value = '';
+    document.getElementById('txDesc').value = '';
+    document.getElementById('txAmount').value = '';
+    document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('txStatus').value = 'processed';
+    document.getElementById('txType').value = 'expense';
+    document.getElementById('txNotes').value = '';
+  }
+}
+function closeModal() { document.getElementById('txModal').classList.remove('show'); }
+
+function saveTx() {
+  const editId = document.getElementById('txEditId').value;
+  const data = {
+    description: document.getElementById('txDesc').value.trim(),
+    amount: parseFloat(document.getElementById('txAmount').value) || 0,
+    date: document.getElementById('txDate').value,
+    categoryId: document.getElementById('txCat').value,
+    status: document.getElementById('txStatus').value,
+    notes: document.getElementById('txNotes').value.trim(),
+    ts: new Date().toISOString(),
+  };
+  if (!data.description || !data.amount) return;
+  if (editId) {
+    fbSet('budget/transactions/' + editId, data);
+  } else {
+    fbPush('budget/transactions', data);
+  }
+  closeModal();
+}
+
+function editTx(id) { openModal(id); }
+function deleteTx(id) { if (confirm('Delete this transaction?')) fbRemove('budget/transactions/' + id); }
+
+// ════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════
+function saveSettings() {
+  fbSet('budget/settings', {
+    companyName: document.getElementById('sCompany').value,
+    currency: document.getElementById('sCurrency').value,
+    seedTarget: parseFloat(document.getElementById('sSeed').value) || 1200000,
+    fiscalYearStart: document.getElementById('sFiscal').value,
+  });
+}
+
+// ════════════════════════════════════════
+//  EXCEL EXPORT
+// ════════════════════════════════════════
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const txArr = Object.values(transactions);
+
+  // Summary sheet
+  const totalExp = txArr.filter(t => (categories[t.categoryId]||{}).type==='expense').reduce((s,t) => s+(parseFloat(t.amount)||0),0);
+  const totalInc = txArr.filter(t => (categories[t.categoryId]||{}).type==='income').reduce((s,t) => s+(parseFloat(t.amount)||0),0);
+  const summRows = [
+    ['OpenYap AI LLC — Budget Summary'],
+    ['Generated', new Date().toLocaleDateString()],
+    [],
+    ['Total Expenses', totalExp],
+    ['Total Income', totalInc],
+    ['Net', totalInc - totalExp],
+    ['Seed Target', settings.seedTarget],
+    ['Remaining', settings.seedTarget - totalExp],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summRows), 'Summary');
+
+  // Transactions sheet
+  const txRows = [['Description','Category','Type','Amount','Date','Status','Notes']];
+  txArr.sort((a,b) => (b.date||'').localeCompare(a.date||'')).forEach(t => {
+    const cat = categories[t.categoryId] || {};
+    txRows.push([t.description, cat.name||'', cat.type||'', t.amount, t.date, t.status, t.notes||'']);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(txRows), 'Transactions');
+
+  // By Category
+  const catRows = [['Category','Type','Total','Count']];
+  Object.entries(categories).forEach(([id, cat]) => {
+    const ct = txArr.filter(t => t.categoryId === id);
+    catRows.push([cat.name, cat.type, ct.reduce((s,t) => s+(parseFloat(t.amount)||0),0), ct.length]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), 'By Category');
+
+  XLSX.writeFile(wb, 'OpenYap_Budget_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// Set default date
+document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
