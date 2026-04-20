@@ -100,9 +100,17 @@ body { background:#060e1d; color:#dde5fb; }
       <span class="material-symbols-outlined text-[20px]">dashboard</span>
       <span class="font-headline tracking-tight">Dashboard</span>
     </a></li>
+    <li><a class="nav-item" onclick="switchView('plan')" data-view="plan">
+      <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+      <span class="font-headline tracking-tight">Plan</span>
+    </a></li>
     <li><a class="nav-item" onclick="switchView('expenses')" data-view="expenses">
       <span class="material-symbols-outlined text-[20px]">payments</span>
       <span class="font-headline tracking-tight">Expenses</span>
+    </a></li>
+    <li><a class="nav-item" onclick="switchView('outlook')" data-view="outlook">
+      <span class="material-symbols-outlined text-[20px]">query_stats</span>
+      <span class="font-headline tracking-tight">Outlook</span>
     </a></li>
     <li><a class="nav-item" onclick="switchView('nodes')" data-view="nodes">
       <span class="material-symbols-outlined text-[20px]">account_tree</span>
@@ -229,6 +237,92 @@ body { background:#060e1d; color:#dde5fb; }
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- ═══════════════ PLAN VIEW ═══════════════ -->
+  <div class="view flex-col p-12 gap-8 max-w-[1600px] mx-auto w-full" id="v-plan">
+    <div class="flex items-end justify-between gap-6">
+      <div>
+        <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold">Conceptual Budget</p>
+        <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Monthly <span class="text-primary glow-text">Plan</span></h2>
+        <p class="text-on-surface-variant text-lg mt-2">Enter planned spend per category per month. Your actual transactions compare against this.</p>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="shiftPlanHorizon(-6)" class="flex items-center gap-2 bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant hover:text-primary px-4 py-2 rounded-lg transition-colors">
+          <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+          <span class="font-body text-xs uppercase tracking-widest">Earlier</span>
+        </button>
+        <button onclick="shiftPlanHorizon(6)" class="flex items-center gap-2 bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant hover:text-primary px-4 py-2 rounded-lg transition-colors">
+          <span class="font-body text-xs uppercase tracking-widest">Later</span>
+          <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Plan totals strip -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="planTotals"></div>
+
+    <!-- Plan matrix -->
+    <div class="bg-surface-container-low rounded-xl glow-box overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full" id="planMatrix">
+          <thead id="planHead"></thead>
+          <tbody id="planBody"></tbody>
+          <tfoot id="planFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <p class="text-on-surface-variant text-xs">Tip: paste a single value across a row by entering it in any cell — hit Tab to move along the row.</p>
+  </div>
+
+  <!-- ═══════════════ OUTLOOK VIEW ═══════════════ -->
+  <div class="view flex-col p-12 gap-10 max-w-[1600px] mx-auto w-full" id="v-outlook">
+    <div>
+      <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold">Plan vs Actual</p>
+      <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Budget <span class="text-primary glow-text">Outlook</span></h2>
+      <p class="text-on-surface-variant text-lg mt-2">How your real spend is tracking against the conceptual budget.</p>
+    </div>
+
+    <!-- Summary tiles -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="outlookTiles"></div>
+
+    <!-- Burndown chart -->
+    <section class="bg-surface-container-low rounded-xl p-8 glow-box">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h3 class="font-headline text-xl font-bold text-on-surface">Cumulative Burndown</h3>
+          <p class="text-xs text-on-surface-variant mt-1">Planned trajectory vs actual spend over the horizon.</p>
+        </div>
+        <div class="flex items-center gap-5 text-xs font-body uppercase tracking-widest">
+          <span class="flex items-center gap-2 text-on-surface-variant">
+            <span class="w-4 h-[2px] bg-primary"></span> Planned
+          </span>
+          <span class="flex items-center gap-2 text-on-surface-variant">
+            <span class="w-4 h-[2px]" style="background:#ec4899"></span> Actual
+          </span>
+        </div>
+      </div>
+      <div id="burndownChart" class="w-full"></div>
+    </section>
+
+    <!-- Variance table -->
+    <section class="bg-surface-container-low rounded-xl p-8 glow-box">
+      <h3 class="font-headline text-xl font-bold text-on-surface mb-6">Category Variance</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="text-left text-xs uppercase tracking-[0.15em] text-on-surface-variant border-b border-outline-variant/20">
+            <tr>
+              <th class="pb-4 font-semibold">Category</th>
+              <th class="pb-4 font-semibold text-right">Planned</th>
+              <th class="pb-4 font-semibold text-right">Actual</th>
+              <th class="pb-4 font-semibold text-right">Variance</th>
+              <th class="pb-4 font-semibold w-[30%]">Used</th>
+            </tr>
+          </thead>
+          <tbody id="varianceBody" class="text-sm font-body"></tbody>
+        </table>
+      </div>
+    </section>
   </div>
 
   <!-- ═══════════════ NODES VIEW ═══════════════ -->
@@ -404,8 +498,11 @@ function fbListen(path, cb) { db.ref(path).on('value', snap => cb(snap.val())); 
 // ════════════════════════════════════════
 let categories = {};
 let transactions = {};
+let plan = {}; // { catId: { 'YYYY-MM': amount } }
 let settings = { currency:'USD', fiscalYearStart:'2026-01', companyName:'OpenYap AI LLC', seedTarget:1200000 };
 let currentView = 'dashboard';
+let planHorizonOffset = 0; // months shifted from fiscalYearStart in the Plan matrix
+const PLAN_MONTHS = 12;
 
 const DEFAULT_CATS = {
   llc:    { name:'LLC Formation',   type:'expense', icon:'gavel',       color:'#8ff5ff', order:0 },
@@ -433,6 +530,8 @@ function switchView(v) {
   document.getElementById('breadcrumb').textContent = v.charAt(0).toUpperCase() + v.slice(1);
   if (v === 'nodes') renderNodes();
   if (v === 'dashboard') renderDashTopology();
+  if (v === 'plan') renderPlan();
+  if (v === 'outlook') renderOutlook();
 }
 
 // ════════════════════════════════════════
@@ -454,6 +553,12 @@ fbListen('budget/transactions', data => {
   renderAll();
 });
 
+fbListen('budget/plan', data => {
+  plan = data || {};
+  if (currentView === 'plan') renderPlan();
+  if (currentView === 'outlook') renderOutlook();
+});
+
 fbListen('budget/settings', data => {
   if (data) {
     settings = { ...settings, ...data };
@@ -470,6 +575,8 @@ function renderAll() {
   renderCatCards();
   if (currentView === 'nodes') renderNodes();
   if (currentView === 'dashboard') renderDashTopology();
+  if (currentView === 'plan') renderPlan();
+  if (currentView === 'outlook') renderOutlook();
 }
 
 // ════════════════════════════════════════
@@ -600,6 +707,329 @@ function renderCatCards() {
         <div class="text-[10px] text-on-surface-variant mt-1">${count} transaction${count!==1?'s':''}</div>
       </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════════
+//  PLAN / OUTLOOK HELPERS
+// ════════════════════════════════════════
+function parseFiscalStart() {
+  const s = (settings.fiscalYearStart || '2026-01').slice(0, 7);
+  const [y, m] = s.split('-').map(Number);
+  return { y, m: (m || 1) - 1 }; // m is 0-indexed for Date()
+}
+function monthKeyAt(offset) {
+  const { y, m } = parseFiscalStart();
+  const d = new Date(y, m + offset, 1);
+  return d.toISOString().slice(0, 7); // YYYY-MM
+}
+function monthLabelAt(offset) {
+  const { y, m } = parseFiscalStart();
+  const d = new Date(y, m + offset, 1);
+  return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }).replace(' ', "'");
+}
+function fmtMoney(n) {
+  if (!n) return '$0';
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1e6) return sign + '$' + (abs/1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return sign + '$' + (abs/1e3).toFixed(1) + 'K';
+  return sign + '$' + abs.toFixed(0);
+}
+function txMonthKey(t) {
+  return (t.date || '').slice(0, 7);
+}
+function planCell(catId, monthKey) {
+  return parseFloat((plan[catId] || {})[monthKey]) || 0;
+}
+function planRowTotal(catId) {
+  const byMonth = plan[catId] || {};
+  return Object.values(byMonth).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+}
+function actualByCatMonth(catId, monthKey) {
+  let s = 0;
+  for (const t of Object.values(transactions)) {
+    if (t.categoryId !== catId) continue;
+    if (txMonthKey(t) !== monthKey) continue;
+    s += parseFloat(t.amount) || 0;
+  }
+  return s;
+}
+function actualRowTotal(catId) {
+  let s = 0;
+  for (const t of Object.values(transactions)) {
+    if (t.categoryId === catId) s += parseFloat(t.amount) || 0;
+  }
+  return s;
+}
+
+// ════════════════════════════════════════
+//  PLAN VIEW
+// ════════════════════════════════════════
+function shiftPlanHorizon(delta) {
+  planHorizonOffset += delta;
+  renderPlan();
+}
+
+function renderPlan() {
+  const cats = Object.entries(categories)
+    .filter(([,c]) => c.type === 'expense')
+    .sort((a,b) => a[1].order - b[1].order);
+
+  const months = [];
+  for (let i = 0; i < PLAN_MONTHS; i++) months.push({ offset: planHorizonOffset + i, key: monthKeyAt(planHorizonOffset + i), label: monthLabelAt(planHorizonOffset + i) });
+
+  // Header
+  const head = document.getElementById('planHead');
+  head.innerHTML = `
+    <tr class="text-left text-[10px] uppercase tracking-[0.15em] text-on-surface-variant border-b border-outline-variant/20">
+      <th class="px-4 py-4 font-semibold sticky left-0 bg-surface-container-low z-10 w-[200px]">Category</th>
+      ${months.map(m => `<th class="px-2 py-4 font-semibold text-right min-w-[88px]">${m.label}</th>`).join('')}
+      <th class="px-4 py-4 font-semibold text-right bg-surface-container/40 min-w-[100px]">Total</th>
+    </tr>`;
+
+  // Body
+  const body = document.getElementById('planBody');
+  body.innerHTML = cats.map(([id, cat]) => {
+    const rowTotal = months.reduce((s, m) => s + planCell(id, m.key), 0);
+    return `
+      <tr class="border-b border-outline-variant/10 hover:bg-surface-container/30 transition-colors">
+        <td class="px-4 py-3 sticky left-0 bg-surface-container-low z-10">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]" style="color:${cat.color}">${cat.icon}</span>
+            <span class="font-headline text-sm font-bold text-on-surface">${cat.name}</span>
+          </div>
+        </td>
+        ${months.map(m => {
+          const v = planCell(id, m.key);
+          return `<td class="px-1 py-2 text-right">
+            <input type="number" inputmode="decimal" step="100"
+              class="plan-cell w-full bg-transparent text-right font-body text-sm text-on-surface border-b border-outline-variant/10 focus:border-primary focus:outline-none py-1 px-2 transition-colors"
+              value="${v || ''}" placeholder="0"
+              data-cat="${id}" data-month="${m.key}"
+              onchange="savePlanCell(this)"
+              onfocus="this.select()" />
+          </td>`;
+        }).join('')}
+        <td class="px-4 py-3 text-right bg-surface-container/40">
+          <span class="font-headline text-sm font-bold text-primary" data-row-total="${id}">${fmtMoney(rowTotal)}</span>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // Footer — column totals
+  const foot = document.getElementById('planFoot');
+  const colTotals = months.map(m => cats.reduce((s, [id]) => s + planCell(id, m.key), 0));
+  const grand = colTotals.reduce((s, v) => s + v, 0);
+  foot.innerHTML = `
+    <tr class="text-xs uppercase tracking-widest text-on-surface-variant border-t border-outline-variant/30 bg-surface-container/20">
+      <td class="px-4 py-4 sticky left-0 bg-surface-container-low z-10 font-bold">Monthly Total</td>
+      ${colTotals.map(t => `<td class="px-2 py-4 text-right font-headline text-sm text-on-surface">${fmtMoney(t)}</td>`).join('')}
+      <td class="px-4 py-4 text-right bg-surface-container/40 font-headline text-base text-primary glow-text">${fmtMoney(grand)}</td>
+    </tr>`;
+
+  // Totals strip
+  const seed = parseFloat(settings.seedTarget) || 0;
+  const pctOfSeed = seed ? (grand / seed) * 100 : 0;
+  const avgMonthly = grand / PLAN_MONTHS;
+  document.getElementById('planTotals').innerHTML = `
+    <div class="bg-surface-container-low rounded-xl p-6 glow-box">
+      <div class="text-xs uppercase tracking-widest text-on-surface-variant mb-2">Total Planned (${PLAN_MONTHS} mo)</div>
+      <div class="font-headline text-3xl font-light text-primary glow-text">${fmtMoney(grand)}</div>
+    </div>
+    <div class="bg-surface-container-low rounded-xl p-6 glow-box">
+      <div class="text-xs uppercase tracking-widest text-on-surface-variant mb-2">Avg Monthly Burn</div>
+      <div class="font-headline text-3xl font-light text-on-surface">${fmtMoney(avgMonthly)}</div>
+    </div>
+    <div class="bg-surface-container-low rounded-xl p-6 glow-box">
+      <div class="text-xs uppercase tracking-widest text-on-surface-variant mb-2">% of Seed Target</div>
+      <div class="font-headline text-3xl font-light text-on-surface">${pctOfSeed.toFixed(1)}%</div>
+      <div class="text-[10px] text-on-surface-variant mt-1">Seed: ${fmtMoney(seed)}</div>
+    </div>`;
+}
+
+function savePlanCell(inp) {
+  const cat = inp.dataset.cat, mo = inp.dataset.month;
+  const val = parseFloat(inp.value) || 0;
+  const path = 'budget/plan/' + cat + '/' + mo;
+  if (val === 0) {
+    db.ref(path).remove();
+  } else {
+    fbSet(path, val);
+  }
+  // Optimistic local update so totals refresh immediately
+  if (!plan[cat]) plan[cat] = {};
+  if (val === 0) delete plan[cat][mo]; else plan[cat][mo] = val;
+  renderPlan();
+}
+
+// ════════════════════════════════════════
+//  OUTLOOK VIEW
+// ════════════════════════════════════════
+function renderOutlook() {
+  const cats = Object.entries(categories)
+    .filter(([,c]) => c.type === 'expense')
+    .sort((a,b) => a[1].order - b[1].order);
+
+  // Build month range: from fiscalYearStart through max(PLAN_MONTHS, latest actual month)
+  const { y, m } = parseFiscalStart();
+  const startDate = new Date(y, m, 1);
+  const txMonthKeys = Object.values(transactions).map(txMonthKey).filter(Boolean);
+  let maxOffset = PLAN_MONTHS - 1;
+  txMonthKeys.forEach(k => {
+    const [ky, km] = k.split('-').map(Number);
+    const off = (ky - y) * 12 + ((km - 1) - m);
+    if (off > maxOffset) maxOffset = off;
+  });
+  // Also include all plan months
+  Object.values(plan).forEach(monthMap => {
+    Object.keys(monthMap || {}).forEach(k => {
+      const [ky, km] = k.split('-').map(Number);
+      const off = (ky - y) * 12 + ((km - 1) - m);
+      if (off > maxOffset) maxOffset = off;
+    });
+  });
+  const months = [];
+  for (let i = 0; i <= maxOffset; i++) months.push({ offset: i, key: monthKeyAt(i), label: monthLabelAt(i) });
+
+  // Totals
+  let totalPlanned = 0, totalActual = 0;
+  cats.forEach(([id]) => {
+    totalPlanned += planRowTotal(id);
+    totalActual += actualRowTotal(id);
+  });
+  const variance = totalPlanned - totalActual;
+  const pctUsed = totalPlanned ? (totalActual / totalPlanned) * 100 : 0;
+
+  // Tiles
+  document.getElementById('outlookTiles').innerHTML = `
+    ${tile('Total Planned', fmtMoney(totalPlanned), 'savings', 'primary')}
+    ${tile('Total Actual', fmtMoney(totalActual), 'payments', 'tertiary')}
+    ${tile('Variance', (variance >= 0 ? '+' : '') + fmtMoney(variance), variance >= 0 ? 'trending_up' : 'trending_down', variance >= 0 ? 'primary' : 'error')}
+    ${tile('% of Plan Used', pctUsed.toFixed(1) + '%', 'donut_small', pctUsed > 100 ? 'error' : 'primary')}
+  `;
+
+  // Burndown chart
+  const today = new Date();
+  let cumPlanned = 0, cumActual = 0;
+  const plannedPts = [], actualPts = [];
+  const actualLastIdx = (() => {
+    let idx = -1;
+    months.forEach((mo, i) => {
+      const [ky, km] = mo.key.split('-').map(Number);
+      const d = new Date(ky, km - 1, 1);
+      if (d <= today) idx = i;
+    });
+    return idx;
+  })();
+  months.forEach((mo, i) => {
+    cats.forEach(([id]) => { cumPlanned += planCell(id, mo.key); });
+    plannedPts.push(cumPlanned);
+    if (i <= actualLastIdx) {
+      cats.forEach(([id]) => { cumActual += actualByCatMonth(id, mo.key); });
+      actualPts.push(cumActual);
+    }
+  });
+  drawBurndown(months, plannedPts, actualPts);
+
+  // Variance table
+  const body = document.getElementById('varianceBody');
+  body.innerHTML = cats.map(([id, cat]) => {
+    const p = planRowTotal(id);
+    const a = actualRowTotal(id);
+    const v = p - a;
+    const pct = p ? Math.min(200, (a / p) * 100) : (a > 0 ? 200 : 0);
+    const barColor = pct > 100 ? '#ef4444' : (pct > 85 ? '#f59e0b' : cat.color);
+    const barWidth = Math.min(100, pct);
+    return `
+      <tr class="border-b border-outline-variant/10 hover:bg-surface-container/30 transition-colors">
+        <td class="py-4">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[18px]" style="color:${cat.color}">${cat.icon}</span>
+            <span class="font-headline text-sm font-bold text-on-surface">${cat.name}</span>
+          </div>
+        </td>
+        <td class="py-4 text-right font-body text-sm text-on-surface-variant">${fmtMoney(p)}</td>
+        <td class="py-4 text-right font-body text-sm text-on-surface">${fmtMoney(a)}</td>
+        <td class="py-4 text-right font-body text-sm ${v >= 0 ? 'text-primary' : 'text-[#ef4444]'}">${(v >= 0 ? '+' : '') + fmtMoney(v)}</td>
+        <td class="py-4">
+          <div class="flex items-center gap-3">
+            <div class="flex-1 h-2 bg-surface-container/60 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all" style="width:${barWidth}%;background:${barColor};box-shadow:0 0 8px ${barColor}"></div>
+            </div>
+            <span class="text-xs font-body text-on-surface-variant w-12 text-right">${p ? pct.toFixed(0) : '—'}${p ? '%' : ''}</span>
+          </div>
+        </td>
+      </tr>`;
+  }).join('') || `<tr><td colspan="5" class="py-8 text-center text-on-surface-variant text-sm">No categories yet. Add some in the Plan view.</td></tr>`;
+}
+
+function tile(label, value, icon, tone) {
+  const toneClass = tone === 'error' ? 'text-[#ef4444]' : (tone === 'tertiary' ? 'text-tertiary' : 'text-primary glow-text');
+  return `
+    <div class="bg-surface-container-low rounded-xl p-6 glow-box relative overflow-hidden">
+      <div class="flex items-center justify-between mb-3">
+        <span class="font-body text-xs uppercase tracking-widest text-on-surface-variant">${label}</span>
+        <span class="material-symbols-outlined text-base ${toneClass.split(' ')[0]}">${icon}</span>
+      </div>
+      <div class="font-headline text-3xl font-light ${toneClass}">${value}</div>
+    </div>`;
+}
+
+function drawBurndown(months, planned, actual) {
+  const el = document.getElementById('burndownChart');
+  const W = 1100, H = 320, padL = 60, padR = 24, padT = 20, padB = 48;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxY = Math.max(1, ...planned, ...actual) * 1.08;
+  const xOf = i => padL + (months.length > 1 ? (i / (months.length - 1)) * plotW : plotW / 2);
+  const yOf = v => padT + plotH - (v / maxY) * plotH;
+
+  // Y-axis gridlines (4 ticks)
+  let grid = '';
+  for (let t = 0; t <= 4; t++) {
+    const v = (maxY * t) / 4;
+    const y = yOf(v);
+    grid += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="2 4"/>`;
+    grid += `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="10" font-family="Inter,sans-serif">${fmtMoney(v)}</text>`;
+  }
+
+  // X-axis labels (every ~3rd month)
+  let xlabels = '';
+  const step = Math.max(1, Math.ceil(months.length / 8));
+  months.forEach((m, i) => {
+    if (i % step !== 0 && i !== months.length - 1) return;
+    xlabels += `<text x="${xOf(i)}" y="${H - padB + 20}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10" font-family="Inter,sans-serif">${m.label}</text>`;
+  });
+
+  // Planned line + area
+  const plannedPath = planned.map((v, i) => (i === 0 ? 'M' : 'L') + xOf(i) + ',' + yOf(v)).join(' ');
+  const plannedArea = plannedPath + ` L${xOf(months.length - 1)},${yOf(0)} L${xOf(0)},${yOf(0)} Z`;
+
+  // Actual line (may be shorter than months)
+  const actualPath = actual.map((v, i) => (i === 0 ? 'M' : 'L') + xOf(i) + ',' + yOf(v)).join(' ');
+
+  // Today marker
+  const today = new Date();
+  const { y: fy, m: fm } = parseFiscalStart();
+  const todayOffset = (today.getFullYear() - fy) * 12 + (today.getMonth() - fm) + (today.getDate() / 30);
+  const todayX = xOf(Math.max(0, Math.min(months.length - 1, todayOffset)));
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="plannedFill" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      ${grid}
+      ${xlabels}
+      <line x1="${todayX}" y1="${padT}" x2="${todayX}" y2="${H - padB}" stroke="rgba(255,255,255,0.35)" stroke-dasharray="4 4"/>
+      <text x="${todayX + 6}" y="${padT + 12}" fill="rgba(255,255,255,0.6)" font-size="10" font-family="Inter,sans-serif">Today</text>
+      <path d="${plannedArea}" fill="url(#plannedFill)"/>
+      <path d="${plannedPath}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px rgba(59,130,246,0.5))"/>
+      <path d="${actualPath}" fill="none" stroke="#ec4899" stroke-width="2.5" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px rgba(236,72,153,0.6))"/>
+      ${actual.map((v, i) => `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3" fill="#ec4899"/>`).join('')}
+    </svg>`;
 }
 
 // ════════════════════════════════════════
