@@ -43,6 +43,11 @@ A deeper overhaul aimed at "immersive, cleaner, more minimal, nicer animations a
 - Glass panels: softer shadow (`glow-box` toned down), `1px` accent border instead of heavy drop shadow.
 - Top bar breadcrumb: accent-colored "FORMWORK" chip, smaller type, greater letter-spacing for structure.
 
+### Plan view mode toggle (Flow / Grid)
+- Segmented toggle in the Budget Flow card header — `Flow` (Sankey) or `Grid` (classic spreadsheet). Preference persisted to `localStorage` under `fw.planView`, defaults to Flow.
+- Grid mode brings back the category × month input matrix: type a number, `onchange` calls `savePlanCell(catId, monthKey, val)` which routes through the active scenario. Cells backed by line items stay locked and show the dot indicator; clicking the row still opens the drill-in panel for structured editing.
+- Card title / subtitle / legend / footer tip all swap to match the active mode. Toast confirms the switch.
+
 ### Files
 - `index.html` — single file, everything above
 - `DEVLOG.md` — this entry

@@ -473,23 +473,29 @@ html[data-motion="reduced"] .boot-overlay { display:none; }
     <!-- Plan totals strip -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="planTotals"></div>
 
-    <!-- Sankey flow -->
+    <!-- Plan canvas (Flow / Grid) -->
     <div class="bg-surface-container-low/60 rounded-xl glow-box p-6 md:p-8 relative overflow-hidden">
       <div class="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
-      <div class="flex items-center justify-between mb-6 relative z-10">
+      <div class="flex items-center justify-between mb-6 relative z-10 gap-4 flex-wrap">
         <div>
-          <h3 class="font-headline text-xl font-bold text-on-surface">Budget Flow</h3>
-          <p class="text-xs text-on-surface-variant mt-1">Sources → months → bays. Width scales with planned dollars.</p>
+          <h3 class="font-headline text-xl font-bold text-on-surface" id="planCanvasTitle">Budget Flow</h3>
+          <p class="text-xs text-on-surface-variant mt-1" id="planCanvasSubtitle">Sources → months → bays. Width scales with planned dollars.</p>
         </div>
-        <div class="flex items-center gap-5 text-[10px] font-body uppercase tracking-[0.15em] text-on-surface-variant">
-          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:#8596ff"></span>Income source</span>
-          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:#6d7589"></span>Month</span>
-          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:var(--accent)"></span>Bay</span>
+        <div class="flex items-center gap-4 flex-wrap">
+          <div id="planCanvasLegend" class="hidden md:flex items-center gap-5 text-[10px] font-body uppercase tracking-[0.15em] text-on-surface-variant"></div>
+          <div class="scen-group" role="tablist" aria-label="Plan view mode">
+            <button class="scen-pill" data-planview="flow" onclick="setPlanView('flow')" title="Sankey flow view">
+              <span class="material-symbols-outlined text-[15px]">water_drop</span> Flow
+            </button>
+            <button class="scen-pill" data-planview="grid" onclick="setPlanView('grid')" title="Classic spreadsheet grid">
+              <span class="material-symbols-outlined text-[15px]">grid_on</span> Grid
+            </button>
+          </div>
         </div>
       </div>
-      <div id="planSankey" class="sankey-wrap relative z-10"></div>
+      <div id="planCanvas" class="sankey-wrap relative z-10"></div>
     </div>
-    <p class="text-on-surface-variant text-xs font-body">Tip: click a band or a bay to drill into its line items. Press <span class="cmd-kbd">⌘K</span> for the command palette.</p>
+    <p class="text-on-surface-variant text-xs font-body" id="planHelp">Tip: click a band or a bay to drill into its line items. Press <span class="cmd-kbd">⌘K</span> for the command palette.</p>
   </div>
 
   <!-- ═══════════════ OUTLOOK VIEW ═══════════════ -->
@@ -872,6 +878,14 @@ const PLAN_MONTHS = 12;
 let panelCatId = null;
 let catCompareSort = { key: 'planned', dir: 'desc' };
 let itemsCompareSort = { key: 'amount', dir: 'desc' };
+let planView = (localStorage.getItem('fw.planView') === 'grid') ? 'grid' : 'flow';
+
+function setPlanView(v) {
+  planView = (v === 'grid') ? 'grid' : 'flow';
+  localStorage.setItem('fw.planView', planView);
+  renderPlan();
+  toast(planView === 'grid' ? 'Grid mode · type values directly' : 'Flow mode · visualize the Sankey', 'info', { ttl: 1400 });
+}
 
 // ════════════════════════════════════════
 //  SCENARIO PATHS
@@ -1364,11 +1378,106 @@ function renderPlan() {
       <div class="text-[11px] text-on-surface-variant mt-1">Seed target · ${fmtMoney(seed)}</div>
     </div>`;
 
-  renderPlanSankey(expCats, incCats, months, grand);
+  // Sync toggle UI
+  document.querySelectorAll('[data-planview]').forEach(b => b.classList.toggle('active', b.dataset.planview === planView));
+  const title = document.getElementById('planCanvasTitle');
+  const sub = document.getElementById('planCanvasSubtitle');
+  const legend = document.getElementById('planCanvasLegend');
+  const help = document.getElementById('planHelp');
+  if (planView === 'flow') {
+    if (title) title.textContent = 'Budget Flow';
+    if (sub) sub.textContent = 'Sources → months → bays. Width scales with planned dollars.';
+    if (legend) legend.innerHTML = `
+      <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:#8596ff"></span>Income source</span>
+      <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:#6d7589"></span>Month</span>
+      <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:var(--accent)"></span>Bay</span>`;
+    if (help) help.innerHTML = 'Tip: click a band or a bay to drill into its line items. Press <span class="cmd-kbd">⌘K</span> for the command palette.';
+    renderPlanSankey(expCats, incCats, months, grand);
+  } else {
+    if (title) title.textContent = 'Budget Grid';
+    if (sub) sub.textContent = 'Type numbers into cells. Cells with line items are locked — click the row to edit them.';
+    if (legend) legend.innerHTML = '';
+    if (help) help.innerHTML = 'Tip: tab between cells, enter a rough number for fast planning, or click a category row to break a cell into line items.';
+    renderPlanGrid(expCats, months);
+  }
+}
+
+function renderPlanGrid(cats, months) {
+  const host = document.getElementById('planCanvas');
+  if (!host) return;
+  if (!cats.length) {
+    host.innerHTML = `<div class="empty"><span class="material-symbols-outlined empty-glyph">grid_on</span><div class="empty-title">No categories yet</div><div class="empty-hint">Add an expense category to start planning.</div></div>`;
+    return;
+  }
+  const fmt = fmtMoney;
+  const head = `
+    <thead>
+      <tr class="text-left text-[10px] uppercase tracking-[0.15em] text-on-surface-variant border-b border-outline-variant/20">
+        <th class="px-3 py-3 font-semibold sticky left-0 bg-surface-container-low/95 backdrop-blur z-10 w-[220px]">Category</th>
+        ${months.map(m => `<th class="px-2 py-3 font-semibold text-right min-w-[92px] whitespace-nowrap">${m.label}</th>`).join('')}
+        <th class="px-3 py-3 font-semibold text-right bg-surface-container/40 min-w-[100px]">Total</th>
+      </tr>
+    </thead>`;
+  const body = cats.map(([id, cat]) => {
+    const rowTotal = months.reduce((s, m) => s + planCell(id, m.key), 0);
+    const itemCount = (planItems[id] ? Object.keys(planItems[id]).length : 0);
+    return `
+      <tr class="border-b border-outline-variant/10 hover:bg-surface-container/20 transition-colors">
+        <td class="px-3 py-2.5 sticky left-0 bg-surface-container-low/95 backdrop-blur z-10 cursor-pointer" onclick="openCategoryPanel('${id}')">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]" style="color:${cat.color}">${cat.icon}</span>
+            <div class="flex flex-col min-w-0">
+              <span class="font-headline text-sm font-bold text-on-surface truncate">${cat.name}</span>
+              <span class="text-[10px] uppercase tracking-widest text-on-surface-variant">${itemCount ? itemCount + ' item' + (itemCount!==1?'s':'') : 'click to add items'}</span>
+            </div>
+            <span class="material-symbols-outlined text-[15px] ml-auto text-on-surface-variant">chevron_right</span>
+          </div>
+        </td>
+        ${months.map(m => {
+          const items = itemsForCatMonth(id, m.key);
+          if (items.length) {
+            const sum = items.reduce((s, it) => s + (+it.amount || 0), 0);
+            return `<td class="px-1 py-1.5 text-right">
+              <div class="cell-items" onclick="openCategoryPanel('${id}','${m.key}')" title="${items.length} line item${items.length!==1?'s':''} — click to edit">${sum ? fmt(sum) : '—'}</div>
+            </td>`;
+          }
+          const v = planCell(id, m.key);
+          return `<td class="px-1 py-1.5 text-right">
+            <input type="number" inputmode="decimal" step="100"
+              class="plan-cell w-full bg-transparent text-right font-body text-sm text-on-surface rounded-md border border-outline-variant/10 hover:border-outline-variant/40 focus:border-primary focus:bg-primary/5 focus:outline-none py-1 px-2 transition-colors"
+              value="${v || ''}" placeholder="0"
+              onchange="savePlanCell('${id}','${m.key}',this.value)"
+              onfocus="this.select()" />
+          </td>`;
+        }).join('')}
+        <td class="px-3 py-2.5 text-right bg-surface-container/40">
+          <span class="font-headline text-sm font-bold" style="color:var(--accent)">${fmt(rowTotal)}</span>
+        </td>
+      </tr>`;
+  }).join('');
+  const colTotals = months.map(m => cats.reduce((s, [id]) => s + planCell(id, m.key), 0));
+  const grand = colTotals.reduce((s, v) => s + v, 0);
+  const foot = `
+    <tfoot>
+      <tr class="text-[10px] uppercase tracking-widest text-on-surface-variant border-t border-outline-variant/25 bg-surface-container/20">
+        <td class="px-3 py-3.5 sticky left-0 bg-surface-container-low/95 backdrop-blur z-10 font-bold">Monthly Total</td>
+        ${colTotals.map(t => `<td class="px-2 py-3.5 text-right font-headline text-sm text-on-surface">${fmt(t)}</td>`).join('')}
+        <td class="px-3 py-3.5 text-right bg-surface-container/40 font-headline text-base glow-text" style="color:var(--accent)">${fmt(grand)}</td>
+      </tr>
+    </tfoot>`;
+
+  host.innerHTML = `
+    <div class="overflow-x-auto -mx-2 md:-mx-4">
+      <table class="w-full border-separate" style="border-spacing:0">
+        ${head}
+        <tbody>${body}</tbody>
+        ${foot}
+      </table>
+    </div>`;
 }
 
 function renderPlanSankey(expCats, incCats, months, grand) {
-  const host = document.getElementById('planSankey');
+  const host = document.getElementById('planCanvas');
   if (!host) return;
   host.innerHTML = '';
 
