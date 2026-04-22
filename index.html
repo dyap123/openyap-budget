@@ -4,6 +4,17 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>FORMWORK — OpenYap Budget Intelligence</title>
+<meta name="description" content="Formwork — budget intelligence for OpenYap. Plan, pour, and compare every dollar."/>
+<meta property="og:title" content="FORMWORK"/>
+<meta property="og:description" content="Budget intelligence for OpenYap. Plan, pour, and compare every dollar."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://dyap123.github.io/openyap-budget/"/>
+<meta property="og:image" content="https://dyap123.github.io/openyap-budget/og.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="FORMWORK"/>
+<meta name="twitter:description" content="Budget intelligence for OpenYap."/>
+<meta name="twitter:image" content="https://dyap123.github.io/openyap-budget/og.png"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a1324'/%3E%3Cg stroke='%238ff5ff' stroke-width='1.6' stroke-linecap='round' opacity='0.95'%3E%3Cpath d='M7 11h18M7 16h18M7 21h18'/%3E%3Cpath d='M11 7v18M16 7v18M21 7v18'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='2' fill='%238ff5ff'/%3E%3C/svg%3E"/>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
@@ -14,6 +25,8 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3"></script>
 <script>
 tailwind.config = {
   darkMode: "class",
@@ -66,45 +79,61 @@ tailwind.config = {
   --accent: #8ff5ff;
   --accent-dim: #00deec;
   --accent-on: #00323a;
-  --accent-glow: rgba(143,245,255,0.35);
-  --accent-glow-soft: rgba(143,245,255,0.05);
+  --accent-glow: rgba(143,245,255,0.18);
+  --accent-glow-soft: rgba(143,245,255,0.03);
+  --accent-glow-strong: rgba(143,245,255,0.32);
+  --surface-quiet: #0a1222;
 }
-html[data-accent="violet"] { --accent:#bf81ff; --accent-dim:#9c42f4; --accent-on:#1a002e; --accent-glow:rgba(191,129,255,0.35); --accent-glow-soft:rgba(191,129,255,0.06); }
-html[data-accent="amber"]  { --accent:#f5b759; --accent-dim:#e99a2c; --accent-on:#2b1700;  --accent-glow:rgba(245,183,89,0.35);  --accent-glow-soft:rgba(245,183,89,0.06); }
+html[data-accent="violet"] { --accent:#bf81ff; --accent-dim:#9c42f4; --accent-on:#1a002e; --accent-glow:rgba(191,129,255,0.18); --accent-glow-soft:rgba(191,129,255,0.03); --accent-glow-strong:rgba(191,129,255,0.32); }
+html[data-accent="amber"]  { --accent:#f5b759; --accent-dim:#e99a2c; --accent-on:#2b1700;  --accent-glow:rgba(245,183,89,0.18);   --accent-glow-soft:rgba(245,183,89,0.03);  --accent-glow-strong:rgba(245,183,89,0.32); }
 
-body { background:#050a16; color:#dde5fb; }
-.glass { background:rgba(16,26,44,0.62); backdrop-filter:blur(22px) saturate(140%); -webkit-backdrop-filter:blur(22px) saturate(140%); }
-.glow-box { box-shadow:0 20px 40px rgba(0,0,0,0.45),0 0 18px var(--accent-glow-soft); }
+body { background:#050a16; color:#dde5fb; font-feature-settings:"ss01","cv11"; }
+.glass { background:rgba(12,20,36,0.68); backdrop-filter:blur(26px) saturate(150%); -webkit-backdrop-filter:blur(26px) saturate(150%); border:1px solid rgba(143,245,255,0.06); }
+.glow-box { box-shadow:0 16px 32px rgba(0,0,0,0.35),0 0 0 1px rgba(143,245,255,0.04); }
 .glow-btn { background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dim) 100%); color:var(--accent-on); }
 .glow-btn:hover { box-shadow:0 0 18px var(--accent-glow); }
 .glow-text { text-shadow:0 0 10px var(--accent-glow); }
-.bg-grid { background-image:linear-gradient(to right,rgba(64,72,90,0.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(64,72,90,0.05) 1px,transparent 1px); background-size:40px 40px; }
+.bg-grid { background-image:linear-gradient(to right,rgba(64,72,90,0.04) 1px,transparent 1px),linear-gradient(to bottom,rgba(64,72,90,0.04) 1px,transparent 1px); background-size:48px 48px; }
 .view { display:none; }
 .view.active { display:flex; }
 
-.nav-item { display:flex; align-items:center; gap:1rem; padding:0.75rem 1.5rem; color:#a3abc0; transition:all 0.2s; cursor:pointer; font-size:0.875rem; position:relative; }
-.nav-item:hover { color:var(--accent); background:#152034; }
-.nav-item.active { color:var(--accent); background:linear-gradient(to right,var(--accent-glow-soft),transparent); font-weight:700; }
-.nav-item.active::before { content:""; position:absolute; left:0; top:10%; bottom:10%; width:2px; background:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
+/* Unified button system */
+.btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 1.1rem; border-radius:0.5rem; font-family:Inter,sans-serif; font-size:0.75rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; transition:all 0.18s ease; cursor:pointer; border:1px solid transparent; white-space:nowrap; }
+.btn .material-symbols-outlined { font-size:18px; }
+.btn-ghost { background:transparent; color:#a3abc0; border-color:rgba(109,117,137,0.25); }
+.btn-ghost:hover { color:var(--accent); border-color:var(--accent); background:var(--accent-glow-soft); }
+.btn-primary { background:var(--accent); color:var(--accent-on); border-color:transparent; font-weight:700; }
+.btn-primary:hover { box-shadow:0 0 20px var(--accent-glow); transform:translateY(-1px); }
+.btn-soft { background:rgba(143,245,255,0.07); color:var(--accent); border-color:rgba(143,245,255,0.18); }
+.btn-soft:hover { background:rgba(143,245,255,0.13); border-color:var(--accent); }
+.btn-icon { padding:0.5rem; border-radius:0.5rem; background:transparent; color:#a3abc0; border:none; cursor:pointer; transition:color 0.15s, background 0.15s; display:inline-flex; align-items:center; justify-content:center; }
+.btn-icon:hover { color:var(--accent); background:rgba(143,245,255,0.06); }
+
+.nav-item { display:flex; align-items:center; gap:1rem; padding:0.75rem 1.5rem; color:#a3abc0; transition:all 0.2s; cursor:pointer; font-size:0.875rem; position:relative; font-weight:500; }
+.nav-item:hover { color:var(--accent); background:rgba(143,245,255,0.04); }
+.nav-item.active { color:var(--accent); background:linear-gradient(to right,var(--accent-glow-soft),transparent); font-weight:600; }
+.nav-item.active::before { content:""; position:absolute; left:0; top:15%; bottom:15%; width:2px; background:var(--accent); box-shadow:0 0 6px var(--accent-glow); }
 
 .status-processed { background:var(--accent-glow-soft); color:var(--accent); border-left:2px solid var(--accent); }
-.status-pending { background:rgba(26,38,60,1); color:#a3abc0; border-left:2px solid #40485a; }
+.status-pending { background:rgba(26,38,60,0.6); color:#a3abc0; border-left:2px solid #40485a; }
 .status-flagged { background:rgba(255,113,108,0.1); color:#ff716c; border-left:2px solid #ff716c; }
-.status-planned { background:rgba(163,171,192,0.08); color:#a3abc0; border-left:2px solid #40485a; }
+.status-planned { background:rgba(163,171,192,0.06); color:#a3abc0; border-left:2px solid #40485a; }
 .status-committed { background:rgba(245,183,89,0.1); color:#f5b759; border-left:2px solid #f5b759; }
 .status-done { background:var(--accent-glow-soft); color:var(--accent); border-left:2px solid var(--accent); }
 
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:100; display:none; align-items:center; justify-content:center; }
-.modal-overlay.show { display:flex; }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(6px); z-index:100; display:none; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; animation:fw-fade .2s ease; }
+@keyframes fw-fade { from { opacity:0 } to { opacity:1 } }
+@keyframes fw-rise { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
 
 /* Global WebGL ambient background */
-#fwBg { position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:0.85; }
+#fwBg { position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:0.6; }
 html[data-motion="reduced"] #fwBg { display:none; }
 body::before {
   content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background:
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(143,245,255,0.06), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(191,129,255,0.05), transparent 70%);
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(143,245,255,0.04), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(191,129,255,0.035), transparent 70%);
 }
 
 /* Drill-in panel */
@@ -112,17 +141,13 @@ body::before {
 .fw-panel.show { transform:translateX(0); }
 .fw-panel-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(3px); z-index:69; opacity:0; pointer-events:none; transition:opacity .25s; }
 .fw-panel-backdrop.show { opacity:1; pointer-events:auto; }
+html[data-motion="reduced"] .fw-panel { transition:none; }
 
-/* Formwork lattice motif behind brand wordmark */
+/* Formwork lattice motif */
 .lattice-motif { position:absolute; inset:0; background-image:
   linear-gradient(to right, rgba(143,245,255,0.05) 1px, transparent 1px),
   linear-gradient(to bottom, rgba(143,245,255,0.05) 1px, transparent 1px);
   background-size:12px 12px; mix-blend-mode:screen; pointer-events:none; opacity:0.55; }
-
-/* Item-backed plan cell dot */
-.cell-items { position:relative; cursor:pointer; padding:0.35rem 0.5rem; border-bottom:1px dashed rgba(143,245,255,0.18); color:#dde5fb; font-family:Inter,sans-serif; font-size:0.8125rem; text-align:right; transition:background .15s; }
-.cell-items:hover { background:var(--accent-glow-soft); }
-.cell-items::after { content:""; position:absolute; top:0.4rem; right:0.4rem; width:5px; height:5px; border-radius:50%; background:var(--accent); box-shadow:0 0 6px var(--accent-glow); }
 
 .sort-btn { cursor:pointer; user-select:none; }
 .sort-btn:hover { color:var(--accent); }
@@ -131,13 +156,127 @@ body::before {
 
 .spark { display:block; width:100%; height:48px; }
 
-@media(max-width:768px) { nav.sidebar { display:none; } main.content { margin-left:0 !important; } .fw-panel { width:100vw; } }
+/* Toast */
+.toast-layer { position:fixed; bottom:1.5rem; right:1.5rem; z-index:120; display:flex; flex-direction:column; gap:0.5rem; pointer-events:none; }
+.toast { pointer-events:auto; min-width:260px; max-width:380px; padding:0.75rem 1rem; border-radius:0.5rem; background:rgba(12,20,36,0.95); backdrop-filter:blur(20px); border:1px solid rgba(143,245,255,0.12); color:#dde5fb; font-family:Inter,sans-serif; font-size:0.8125rem; display:flex; align-items:center; gap:0.75rem; box-shadow:0 12px 28px rgba(0,0,0,0.45); animation:fw-rise .22s ease-out; }
+.toast .material-symbols-outlined { font-size:18px; }
+.toast.success { border-left:2px solid var(--accent); }
+.toast.success .material-symbols-outlined { color:var(--accent); }
+.toast.info { border-left:2px solid #8596ff; }
+.toast.info .material-symbols-outlined { color:#8596ff; }
+.toast.warn { border-left:2px solid #f5b759; }
+.toast.warn .material-symbols-outlined { color:#f5b759; }
+.toast.error { border-left:2px solid #ff716c; }
+.toast.error .material-symbols-outlined { color:#ff716c; }
+.toast.hide { opacity:0; transform:translateY(8px); transition:all .2s ease; }
+
+/* Skeleton shimmer */
+.skel { position:relative; overflow:hidden; background:rgba(15,25,44,0.6); border-radius:0.5rem; }
+.skel::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg, transparent 0%, rgba(143,245,255,0.06) 50%, transparent 100%); animation:fw-shimmer 1.4s ease-in-out infinite; }
+@keyframes fw-shimmer { from { transform:translateX(-100%) } to { transform:translateX(100%) } }
+html[data-motion="reduced"] .skel::after { animation:none; }
+
+/* Empty state */
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem 2rem; text-align:center; color:#a3abc0; }
+.empty-glyph { font-size:48px; opacity:0.35; margin-bottom:1rem; }
+.empty-title { font-family:Manrope,sans-serif; font-weight:700; font-size:1.125rem; color:#dde5fb; margin-bottom:0.5rem; }
+.empty-hint { font-size:0.8125rem; color:#a3abc0; margin-bottom:1.5rem; max-width:24rem; line-height:1.5; }
+
+/* Command palette */
+.cmd-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(8px); z-index:110; display:none; align-items:flex-start; justify-content:center; padding-top:15vh; }
+.cmd-overlay.show { display:flex; animation:fw-fade .18s ease; }
+.cmd-panel { width:100%; max-width:600px; background:rgba(12,20,36,0.96); backdrop-filter:blur(30px) saturate(150%); border:1px solid rgba(143,245,255,0.12); border-radius:0.75rem; overflow:hidden; box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:fw-rise .22s ease-out; }
+.cmd-input-wrap { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; border-bottom:1px solid rgba(109,117,137,0.12); }
+.cmd-input-wrap .material-symbols-outlined { color:#a3abc0; font-size:22px; }
+.cmd-input { flex:1; background:transparent; border:0; outline:0; color:#dde5fb; font-family:Inter,sans-serif; font-size:1rem; letter-spacing:0.01em; }
+.cmd-input::placeholder { color:#6d7589; }
+.cmd-kbd { font-family:JetBrains Mono,monospace; font-size:0.65rem; color:#6d7589; border:1px solid rgba(109,117,137,0.25); padding:0.15rem 0.4rem; border-radius:0.25rem; }
+.cmd-list { max-height:60vh; overflow-y:auto; padding:0.5rem; }
+.cmd-group-label { padding:0.5rem 0.75rem 0.25rem; font-size:0.6rem; letter-spacing:0.2em; text-transform:uppercase; color:#6d7589; font-weight:700; }
+.cmd-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.75rem; border-radius:0.45rem; cursor:pointer; color:#dde5fb; transition:background .12s; }
+.cmd-item .material-symbols-outlined { font-size:18px; color:#a3abc0; }
+.cmd-item.active { background:rgba(143,245,255,0.08); }
+.cmd-item.active .material-symbols-outlined { color:var(--accent); }
+.cmd-item-label { flex:1; font-size:0.875rem; }
+.cmd-item-hint { font-size:0.65rem; color:#6d7589; letter-spacing:0.1em; text-transform:uppercase; }
+
+/* Sankey */
+.sankey-wrap { position:relative; width:100%; min-height:520px; }
+.sankey-wrap svg { width:100%; height:auto; display:block; }
+.sankey-link { fill:none; cursor:pointer; transition:stroke-opacity .2s ease; }
+.sankey-link:hover { stroke-opacity:0.75 !important; }
+.sankey-node rect { cursor:pointer; transition:opacity .2s, filter .2s; }
+.sankey-node rect:hover { opacity:1 !important; filter:drop-shadow(0 0 8px currentColor); }
+.sankey-node text { pointer-events:none; fill:#dde5fb; font-family:Manrope,sans-serif; font-size:11px; font-weight:600; }
+.sankey-node text.sub { fill:#6d7589; font-family:Inter,sans-serif; font-size:9.5px; font-weight:500; }
+.sankey-tooltip { position:fixed; pointer-events:none; background:rgba(12,20,36,0.96); border:1px solid rgba(143,245,255,0.18); border-radius:0.4rem; padding:0.55rem 0.75rem; font-family:Inter,sans-serif; font-size:0.75rem; color:#dde5fb; box-shadow:0 10px 28px rgba(0,0,0,0.5); backdrop-filter:blur(14px); z-index:90; transform:translate(-50%,-110%); opacity:0; transition:opacity .14s; white-space:nowrap; }
+.sankey-tooltip.show { opacity:1; }
+.sankey-tooltip .t-label { font-family:Manrope,sans-serif; font-weight:700; font-size:0.8125rem; }
+.sankey-tooltip .t-sub { color:#a3abc0; font-size:0.7rem; margin-top:0.125rem; }
+html[data-motion="reduced"] .sankey-link-reveal { stroke-dasharray:none !important; stroke-dashoffset:0 !important; }
+
+/* Scenario pill group */
+.scen-group { display:inline-flex; align-items:center; gap:0.25rem; padding:0.25rem; background:rgba(15,25,44,0.7); border:1px solid rgba(109,117,137,0.18); border-radius:999px; }
+.scen-pill { display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.75rem; border-radius:999px; font-family:Inter,sans-serif; font-size:0.7rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#a3abc0; cursor:pointer; border:0; background:transparent; transition:all .15s; }
+.scen-pill:hover { color:var(--accent); }
+.scen-pill.active { background:var(--accent); color:var(--accent-on); box-shadow:0 0 14px var(--accent-glow); }
+.scen-pill.new-pill { color:#6d7589; }
+.scen-pill.new-pill:hover { color:var(--accent); background:rgba(143,245,255,0.08); }
+
+/* Health gauge */
+.gauge-wrap { position:relative; width:160px; height:160px; }
+.gauge-wrap svg { transform:rotate(-90deg); }
+.gauge-wrap .gauge-value { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.gauge-value .num { font-family:Manrope,sans-serif; font-weight:800; font-size:2.5rem; letter-spacing:-0.04em; line-height:1; }
+.gauge-value .lbl { font-family:Inter,sans-serif; font-size:0.62rem; color:#a3abc0; letter-spacing:0.2em; text-transform:uppercase; margin-top:0.25rem; font-weight:600; }
+
+/* Boot animation overlay */
+.boot-overlay { position:fixed; inset:0; z-index:200; background:#050a16; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+.boot-overlay.fade-out { animation:fw-boot-out .5s ease forwards; }
+.boot-logo { position:relative; display:flex; flex-direction:column; align-items:center; gap:1.25rem; }
+.boot-logo .boot-mark { width:64px; height:64px; }
+.boot-logo .boot-mark path { fill:none; stroke:var(--accent); stroke-width:2.4; stroke-linecap:round; stroke-dasharray:140; stroke-dashoffset:140; animation:fw-boot-draw 0.7s cubic-bezier(.6,0,.2,1) forwards; }
+.boot-logo .boot-mark circle { fill:var(--accent); transform-origin:center; transform:scale(0); animation:fw-boot-dot .35s ease-out 0.55s forwards; }
+.boot-logo .boot-word { font-family:Manrope,sans-serif; font-weight:800; letter-spacing:-0.04em; font-size:2rem; color:var(--accent); text-shadow:0 0 14px var(--accent-glow); opacity:0; transform:translateY(8px); animation:fw-boot-word .4s ease-out 0.35s forwards; }
+@keyframes fw-boot-draw { to { stroke-dashoffset:0 } }
+@keyframes fw-boot-dot { to { transform:scale(1) } }
+@keyframes fw-boot-word { to { opacity:1; transform:translateY(0) } }
+@keyframes fw-boot-out { to { opacity:0; visibility:hidden } }
+html[data-motion="reduced"] .boot-overlay { display:none; }
+
+@media(max-width:768px) { nav.sidebar { display:none; } main.content { margin-left:0 !important; } .fw-panel { width:100vw; } .toast { min-width:auto; max-width:calc(100vw - 2rem); } }
 </style>
 </head>
 <body class="font-body antialiased min-h-screen flex overflow-hidden selection:bg-primary/30 selection:text-primary">
 
+<!-- Boot overlay (first visit per session) -->
+<div class="boot-overlay" id="bootOverlay">
+  <div class="boot-logo">
+    <svg class="boot-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 22 H50 M14 32 H50 M14 42 H50 M22 14 V50 M32 14 V50 M42 14 V50"/>
+      <circle cx="32" cy="32" r="3.2"/>
+    </svg>
+    <div class="boot-word">FORMWORK</div>
+  </div>
+</div>
+
 <!-- WebGL ambient background -->
 <canvas id="fwBg"></canvas>
+
+<!-- Toast layer -->
+<div class="toast-layer" id="toastLayer"></div>
+
+<!-- Command palette -->
+<div class="cmd-overlay" id="cmdOverlay" onclick="if(event.target===this)closeCmdPalette()">
+  <div class="cmd-panel" role="dialog" aria-label="Command palette">
+    <div class="cmd-input-wrap">
+      <span class="material-symbols-outlined">search</span>
+      <input id="cmdInput" class="cmd-input" type="text" placeholder="Type a command or jump to a view…" autocomplete="off" spellcheck="false"/>
+      <span class="cmd-kbd">ESC</span>
+    </div>
+    <div class="cmd-list" id="cmdList"></div>
+  </div>
+</div>
 
 <!-- Sidebar -->
 <nav class="sidebar h-screen w-72 fixed left-0 top-0 bg-[#0a1324]/80 backdrop-blur-2xl shadow-[20px_0_40px_rgba(0,0,0,0.4)] z-50 flex flex-col py-10">
@@ -203,35 +342,40 @@ body::before {
 <!-- Main -->
 <main class="content ml-72 flex-1 relative h-screen overflow-y-auto flex flex-col">
   <!-- Top Bar -->
-  <header class="w-full h-20 sticky top-0 z-40 bg-[rgba(5,10,22,0.35)] backdrop-blur-md border-b border-outline-variant/5 flex justify-between items-center px-12">
-    <div class="flex items-center gap-2 text-on-surface-variant text-sm font-body">
-      <span class="tracking-[0.18em] font-bold" style="color:var(--accent)">FORMWORK</span>
-      <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-      <span class="text-primary font-bold" id="breadcrumb">Dashboard</span>
+  <header class="w-full h-20 sticky top-0 z-40 bg-[rgba(5,10,22,0.55)] backdrop-blur-md border-b border-outline-variant/5 flex justify-between items-center px-12">
+    <div class="flex items-center gap-3 text-on-surface-variant text-sm font-body">
+      <span class="tracking-[0.18em] font-bold text-[11px]" style="color:var(--accent)">FORMWORK</span>
+      <span class="material-symbols-outlined text-[14px] text-outline-variant">chevron_right</span>
+      <span class="text-on-surface font-semibold text-[13px]" id="breadcrumb">Dashboard</span>
     </div>
-    <div class="flex items-center gap-6">
-      <div class="relative group">
-        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-sm group-hover:text-primary transition-colors">search</span>
-        <input class="bg-transparent border-b border-outline-variant/30 text-on-surface font-body tracking-[0.1em] text-[10px] uppercase py-2 pl-9 pr-4 w-64 focus:outline-none focus:border-primary transition-all placeholder:text-outline-variant" placeholder="SEARCH TRANSACTIONS..." id="globalSearch" oninput="filterTable(this.value)" type="text"/>
-      </div>
-      <button class="text-[#a3abc0] hover:text-[color:var(--accent)] transition-colors relative">
+    <div class="flex items-center gap-5">
+      <div class="scen-group" id="scenGroup"></div>
+      <button onclick="openCmdPalette()" class="btn-icon gap-2 px-3 !py-1.5 border border-outline-variant/25 rounded-md hover:border-primary/50 group" aria-label="Open command palette" title="Command palette">
+        <span class="material-symbols-outlined text-[18px]">search</span>
+        <span class="cmd-kbd group-hover:border-primary/50">⌘K</span>
+      </button>
+      <button class="btn-icon" aria-label="Notifications">
         <span class="material-symbols-outlined text-xl">notifications_active</span>
       </button>
-      <button class="text-[#a3abc0] hover:text-[color:var(--accent)] transition-colors">
+      <button class="btn-icon" aria-label="Account">
         <span class="material-symbols-outlined text-xl">account_circle</span>
       </button>
     </div>
   </header>
 
   <!-- ═══════════════ DASHBOARD VIEW ═══════════════ -->
-  <div class="view active flex-col p-12 gap-14 max-w-[1600px] mx-auto w-full" id="v-dashboard">
+  <div class="view active flex-col p-12 gap-12 max-w-[1600px] mx-auto w-full" id="v-dashboard">
     <!-- Header -->
-    <div>
-      <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--accent-glow)]"></span>
-        Live Data Feed
-      </p>
-      <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Budget <span class="text-primary glow-text">Intelligence</span></h2>
+    <div class="flex items-end justify-between gap-8 flex-wrap">
+      <div>
+        <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold flex items-center gap-2" style="color:var(--accent)">
+          <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--accent); box-shadow:0 0 8px var(--accent-glow)"></span>
+          Live
+        </p>
+        <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface leading-none">Budget <span style="color:var(--accent)" class="glow-text">Intelligence</span></h2>
+        <p class="text-on-surface-variant text-base mt-3 max-w-xl leading-relaxed">A calm, continuous view of what's planned, what's poured, and what's left to build.</p>
+      </div>
+      <div id="healthGauge" class="shrink-0"></div>
     </div>
 
     <!-- KPI Cards -->
@@ -241,31 +385,32 @@ body::before {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="dashHealth"></div>
 
     <!-- 3D topology -->
-    <section class="bg-surface-container-low rounded-xl p-10 glow-box relative min-h-[460px] flex overflow-hidden">
-      <div class="absolute inset-0 bg-grid opacity-40"></div>
+    <section class="bg-surface-container-low/60 rounded-xl p-10 glow-box relative min-h-[460px] flex overflow-hidden">
+      <div class="absolute inset-0 bg-grid opacity-25"></div>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--accent-glow-soft)_0%,transparent_70%)]"></div>
-      <h3 class="absolute top-8 left-10 font-body text-sm uppercase tracking-[0.22em] text-on-surface-variant z-20">Formwork Lattice</h3>
+      <h3 class="absolute top-8 left-10 font-body text-xs uppercase tracking-[0.22em] text-on-surface-variant z-20">Formwork Lattice</h3>
       <p class="absolute top-8 right-10 font-body text-[10px] uppercase tracking-[0.22em] text-on-surface-variant z-20">Bay size ∝ planned total</p>
       <div class="relative z-10 w-full h-[400px]" id="dashTopology"></div>
     </section>
   </div>
 
   <!-- ═══════════════ EXPENSES VIEW ═══════════════ -->
-  <div class="view flex-col p-12 gap-16 max-w-[1600px] mx-auto w-full" id="v-expenses">
-    <div class="flex justify-between items-end">
+  <div class="view flex-col p-12 gap-12 max-w-[1600px] mx-auto w-full" id="v-expenses">
+    <div class="flex justify-between items-end gap-6 flex-wrap">
       <div>
-        <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--accent-glow)]"></span>
-          Live Data Feed
+        <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold flex items-center gap-2" style="color:var(--accent)">
+          <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--accent); box-shadow:0 0 8px var(--accent-glow)"></span>
+          Live
         </p>
-        <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Budget Overview</h2>
+        <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface leading-none">Transactions</h2>
+        <p class="text-on-surface-variant text-base mt-3 max-w-xl leading-relaxed">Every dollar that has actually left the account.</p>
       </div>
-      <div class="flex gap-4">
-        <button onclick="exportExcel()" class="px-6 py-3 border border-outline-variant/30 text-on-surface-variant font-label text-xs uppercase tracking-widest hover:border-primary hover:text-primary transition-all rounded-full flex items-center gap-2 bg-surface-container/50 backdrop-blur-md">
-          <span class="material-symbols-outlined text-sm">download</span> Export Log
+      <div class="flex gap-2">
+        <button onclick="exportExcel()" class="btn btn-ghost">
+          <span class="material-symbols-outlined">download</span> Export
         </button>
-        <button onclick="openModal()" class="px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold font-label text-xs uppercase tracking-widest rounded-full shadow-[0_10px_20px_var(--accent-glow-soft)] hover:shadow-[0_10px_30px_var(--accent-glow)] hover:scale-[1.02] transition-all flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm">add</span> New Allocation
+        <button onclick="openModal()" class="btn btn-primary">
+          <span class="material-symbols-outlined">add</span> New
         </button>
       </div>
     </div>
@@ -302,25 +447,25 @@ body::before {
   </div>
 
   <!-- ═══════════════ PLAN VIEW ═══════════════ -->
-  <div class="view flex-col p-12 gap-8 max-w-[1600px] mx-auto w-full" id="v-plan">
+  <div class="view flex-col p-12 gap-10 max-w-[1600px] mx-auto w-full" id="v-plan">
     <div class="flex items-end justify-between gap-6">
       <div>
-        <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold">Conceptual Budget</p>
-        <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Monthly <span class="text-primary glow-text">Plan</span></h2>
-        <p class="text-on-surface-variant text-lg mt-2">Pour plan into each bay. Click a category to break it into specific line items.</p>
+        <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold" style="color:var(--accent)">Conceptual Budget</p>
+        <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface">Monthly <span style="color:var(--accent)" class="glow-text">Plan</span></h2>
+        <p class="text-on-surface-variant text-base mt-3 max-w-xl leading-relaxed">Every dollar flows from a source, through a month, into a bay. Click any band to edit the line items behind it.</p>
       </div>
-      <div class="flex gap-3">
-        <button onclick="shiftPlanHorizon(-6)" class="flex items-center gap-2 bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant hover:text-primary px-4 py-2 rounded-lg transition-colors">
-          <span class="material-symbols-outlined text-[18px]">chevron_left</span>
-          <span class="font-body text-xs uppercase tracking-widest">Earlier</span>
+      <div class="flex gap-2">
+        <button onclick="shiftPlanHorizon(-6)" class="btn btn-ghost">
+          <span class="material-symbols-outlined">chevron_left</span>
+          <span>Earlier</span>
         </button>
-        <button onclick="shiftPlanHorizon(6)" class="flex items-center gap-2 bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant hover:text-primary px-4 py-2 rounded-lg transition-colors">
-          <span class="font-body text-xs uppercase tracking-widest">Later</span>
-          <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+        <button onclick="shiftPlanHorizon(6)" class="btn btn-ghost">
+          <span>Later</span>
+          <span class="material-symbols-outlined">chevron_right</span>
         </button>
-        <button onclick="exportBudgetXlsx()" class="flex items-center gap-2 bg-primary/10 border border-primary/40 hover:border-primary hover:bg-primary/20 text-primary px-4 py-2 rounded-lg transition-colors">
-          <span class="material-symbols-outlined text-[18px]">download</span>
-          <span class="font-body text-xs uppercase tracking-widest font-bold">Export .xlsx</span>
+        <button onclick="exportBudgetXlsx()" class="btn btn-soft">
+          <span class="material-symbols-outlined">download</span>
+          <span>Export</span>
         </button>
       </div>
     </div>
@@ -328,25 +473,31 @@ body::before {
     <!-- Plan totals strip -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="planTotals"></div>
 
-    <!-- Plan matrix -->
-    <div class="bg-surface-container-low rounded-xl glow-box overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full" id="planMatrix">
-          <thead id="planHead"></thead>
-          <tbody id="planBody"></tbody>
-          <tfoot id="planFoot"></tfoot>
-        </table>
+    <!-- Sankey flow -->
+    <div class="bg-surface-container-low/60 rounded-xl glow-box p-6 md:p-8 relative overflow-hidden">
+      <div class="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
+      <div class="flex items-center justify-between mb-6 relative z-10">
+        <div>
+          <h3 class="font-headline text-xl font-bold text-on-surface">Budget Flow</h3>
+          <p class="text-xs text-on-surface-variant mt-1">Sources → months → bays. Width scales with planned dollars.</p>
+        </div>
+        <div class="flex items-center gap-5 text-[10px] font-body uppercase tracking-[0.15em] text-on-surface-variant">
+          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:#8596ff"></span>Income source</span>
+          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:#6d7589"></span>Month</span>
+          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm" style="background:var(--accent)"></span>Bay</span>
+        </div>
       </div>
+      <div id="planSankey" class="sankey-wrap relative z-10"></div>
     </div>
-    <p class="text-on-surface-variant text-xs">Tip: enter a number for rough planning, or click a category row to break the cell into line items (SOS filing, EIN, etc.).</p>
+    <p class="text-on-surface-variant text-xs font-body">Tip: click a band or a bay to drill into its line items. Press <span class="cmd-kbd">⌘K</span> for the command palette.</p>
   </div>
 
   <!-- ═══════════════ OUTLOOK VIEW ═══════════════ -->
-  <div class="view flex-col p-12 gap-10 max-w-[1600px] mx-auto w-full" id="v-outlook">
+  <div class="view flex-col p-12 gap-12 max-w-[1600px] mx-auto w-full" id="v-outlook">
     <div>
-      <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold">Plan vs Actual</p>
-      <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Budget <span class="text-primary glow-text">Outlook</span></h2>
-      <p class="text-on-surface-variant text-lg mt-2">How your real spend is tracking against the conceptual budget.</p>
+      <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold" style="color:var(--accent)">Plan vs Actual</p>
+      <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface leading-none">Outlook</h2>
+      <p class="text-on-surface-variant text-base mt-3 max-w-xl leading-relaxed">How your real spend is tracking against the plan.</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="outlookTiles"></div>
@@ -389,11 +540,11 @@ body::before {
   </div>
 
   <!-- ═══════════════ COMPARE VIEW ═══════════════ -->
-  <div class="view flex-col p-12 gap-10 max-w-[1600px] mx-auto w-full" id="v-compare">
+  <div class="view flex-col p-12 gap-12 max-w-[1600px] mx-auto w-full" id="v-compare">
     <div>
-      <p class="font-label text-primary uppercase tracking-[0.2em] text-xs mb-3 font-bold">Cross-Category</p>
-      <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">Budget <span class="text-primary glow-text">Compare</span></h2>
-      <p class="text-on-surface-variant text-lg mt-2">Stacked flows across every bay, side-by-side variance, and every line item in one place.</p>
+      <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold" style="color:var(--accent)">Cross-Category</p>
+      <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface leading-none">Compare</h2>
+      <p class="text-on-surface-variant text-base mt-3 max-w-xl leading-relaxed">Stacked flows across every bay, side-by-side variance, and every line item in one place.</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="compareTiles"></div>
@@ -453,10 +604,11 @@ body::before {
   </div>
 
   <!-- ═══════════════ NODES VIEW ═══════════════ -->
-  <div class="view flex-col p-12 gap-8 max-w-[1600px] mx-auto w-full" id="v-nodes">
+  <div class="view flex-col p-12 gap-10 max-w-[1600px] mx-auto w-full" id="v-nodes">
     <div>
-      <h2 class="font-headline text-5xl font-extrabold tracking-tighter text-on-surface">System <span class="text-primary glow-text">Nodes</span></h2>
-      <p class="text-on-surface-variant text-lg mt-2">Formwork lattice — each bay is a category, sized by planned total. Studs inside are line items.</p>
+      <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold" style="color:var(--accent)">Spatial View</p>
+      <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface leading-none">Nodes</h2>
+      <p class="text-on-surface-variant text-base mt-3 max-w-xl leading-relaxed">Formwork lattice — each bay is a category, sized by planned total. Studs inside are line items.</p>
     </div>
     <!-- 3D Node Canvas -->
     <div class="relative w-full h-[600px] bg-surface-container-lowest rounded-xl overflow-hidden glow-box border border-outline-variant/10">
@@ -464,10 +616,10 @@ body::before {
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--accent-glow-soft)_0%,transparent_70%)]"></div>
       <div id="nodeContainer" class="absolute inset-0 w-full h-full"></div>
       <div id="nodeTooltip" class="absolute pointer-events-none text-xs font-body px-3 py-2 rounded-lg bg-[rgba(10,19,36,0.92)] border border-outline-variant/20 text-on-surface opacity-0 transition-opacity z-20" style="transform:translate(-50%,-140%)"></div>
-      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-surface-container-high/80 backdrop-blur-xl border border-outline-variant/20 rounded-full px-4 py-2 flex items-center gap-6 shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-30">
-        <button onclick="openModal()" class="flex items-center gap-2 text-primary hover:text-primary-container transition-colors">
-          <span class="material-symbols-outlined text-[18px]">add_circle</span>
-          <span class="font-body text-[10px] uppercase tracking-widest font-bold">New Node</span>
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+        <button onclick="openModal()" class="btn btn-soft">
+          <span class="material-symbols-outlined">add_circle</span>
+          <span>New Node</span>
         </button>
       </div>
     </div>
@@ -475,10 +627,11 @@ body::before {
   </div>
 
   <!-- ═══════════════ SETTINGS VIEW ═══════════════ -->
-  <div class="view flex-col p-12 gap-8 max-w-6xl mx-auto w-full" id="v-settings">
-    <div class="mb-8">
-      <h2 class="font-headline text-[3.5rem] leading-none tracking-tight font-bold text-on-surface mb-4">Configuration</h2>
-      <p class="font-body text-on-surface-variant text-lg">Manage your budget environment, appearance, and exports.</p>
+  <div class="view flex-col p-12 gap-10 max-w-6xl mx-auto w-full" id="v-settings">
+    <div class="mb-4">
+      <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold" style="color:var(--accent)">Configure</p>
+      <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface leading-none">Settings</h2>
+      <p class="font-body text-on-surface-variant text-base mt-3">Company, appearance, exports.</p>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-1 space-y-2">
@@ -514,9 +667,9 @@ body::before {
               <input id="sFiscal" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full transition-all" type="text" value="2026-01"/>
             </div>
           </div>
-          <div class="mt-10 flex justify-end gap-4">
-            <button class="px-6 py-2 rounded font-headline font-bold text-on-surface border border-outline-variant/30 hover:border-outline-variant transition-colors bg-transparent text-sm">Discard</button>
-            <button onclick="saveSettings()" class="px-6 py-2 rounded font-headline font-bold glow-btn text-sm">Save Changes</button>
+          <div class="mt-10 flex justify-end gap-2">
+            <button class="btn btn-ghost">Discard</button>
+            <button onclick="saveSettings()" class="btn btn-primary">Save Changes</button>
           </div>
         </div>
 
@@ -564,7 +717,7 @@ body::before {
               </h3>
               <p class="font-body text-on-surface-variant text-sm">Download full budget as Excel workbook.</p>
             </div>
-            <button onclick="exportExcel()" class="px-6 py-3 glow-btn rounded-full font-headline font-bold text-sm">Export .xlsx</button>
+            <button onclick="exportExcel()" class="btn btn-primary">Export .xlsx</button>
           </div>
         </div>
       </div>
@@ -666,9 +819,9 @@ body::before {
         <input id="txNotes" class="bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 text-on-surface font-body w-full" type="text" placeholder="Optional"/>
       </div>
     </div>
-    <div class="mt-8 flex justify-end gap-4">
-      <button onclick="closeModal()" class="px-6 py-2 rounded font-headline font-bold text-on-surface border border-outline-variant/30 hover:border-outline-variant transition-colors bg-transparent text-sm">Cancel</button>
-      <button onclick="saveTx()" class="px-6 py-2 rounded font-headline font-bold glow-btn text-sm">Save</button>
+    <div class="mt-8 flex justify-end gap-2">
+      <button onclick="closeModal()" class="btn btn-ghost">Cancel</button>
+      <button onclick="saveTx()" class="btn btn-primary">Save</button>
     </div>
   </div>
 </div>
@@ -687,13 +840,30 @@ function fbRemove(path) { return db.ref(path).remove(); }
 function fbListen(path, cb) { db.ref(path).on('value', snap => cb(snap.val())); }
 
 // ════════════════════════════════════════
+//  TOAST HELPER
+// ════════════════════════════════════════
+function toast(msg, kind = 'info', opts = {}) {
+  const layer = document.getElementById('toastLayer');
+  if (!layer) return;
+  const icon = { success:'check_circle', info:'info', warn:'warning', error:'error' }[kind] || 'info';
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.innerHTML = `<span class="material-symbols-outlined">${icon}</span><span>${msg}</span>`;
+  layer.appendChild(el);
+  const ttl = opts.ttl || 2800;
+  setTimeout(() => { el.classList.add('hide'); setTimeout(() => el.remove(), 240); }, ttl);
+}
+
+// ════════════════════════════════════════
 //  STATE
 // ════════════════════════════════════════
 let categories = {};
 let transactions = {};
-let plan = {};        // legacy: { catId: { 'YYYY-MM': amount } }
-let planItems = {};   // new: { catId: { itemId: { name, amount, month, status, notes, order, ts } } }
-let settings = { currency:'USD', fiscalYearStart:'2026-01', companyName:'OpenYap AI LLC', seedTarget:1200000, accent:'cyan', reducedMotion:false };
+let plan = {};        // ACTIVE scenario's legacy plan: { catId: { 'YYYY-MM': amount } }
+let planItems = {};   // ACTIVE scenario's line items: { catId: { itemId: {...} } }
+let scenarios = {};   // { id: { name, createdAt } } — 'base' is implicit/virtual
+let activeScenarioId = 'base'; // 'base' means top-level budget/plan + budget/planItems
+let settings = { currency:'USD', fiscalYearStart:'2026-01', companyName:'OpenYap AI LLC', seedTarget:1200000, accent:'cyan', reducedMotion:false, activeScenario:'base' };
 let currentView = 'dashboard';
 let planHorizonOffset = 0;
 const PLAN_MONTHS = 12;
@@ -702,6 +872,83 @@ const PLAN_MONTHS = 12;
 let panelCatId = null;
 let catCompareSort = { key: 'planned', dir: 'desc' };
 let itemsCompareSort = { key: 'amount', dir: 'desc' };
+
+// ════════════════════════════════════════
+//  SCENARIO PATHS
+// ════════════════════════════════════════
+function scenPath(id) { return id === 'base' ? 'budget' : 'budget/scenarios/' + id; }
+function planPath() { return scenPath(activeScenarioId) + '/plan'; }
+function planItemsPath() { return scenPath(activeScenarioId) + '/planItems'; }
+let _planRef = null, _planItemsRef = null;
+function bindScenarioListeners() {
+  if (_planRef) _planRef.off();
+  if (_planItemsRef) _planItemsRef.off();
+  _planRef = db.ref(planPath());
+  _planItemsRef = db.ref(planItemsPath());
+  _planRef.on('value', snap => {
+    plan = snap.val() || {};
+    if (currentView === 'plan') renderPlan();
+    if (currentView === 'outlook') renderOutlook();
+    if (currentView === 'compare') renderCompare();
+    if (currentView === 'dashboard') { renderKPIs(); renderDashHealth(); renderDashTopology(); renderHealthGauge(); }
+    if (panelCatId) renderPanel();
+  });
+  _planItemsRef.on('value', snap => {
+    planItems = snap.val() || {};
+    if (currentView === 'plan') renderPlan();
+    if (currentView === 'outlook') renderOutlook();
+    if (currentView === 'compare') renderCompare();
+    if (currentView === 'dashboard') { renderKPIs(); renderDashHealth(); renderDashTopology(); renderHealthGauge(); }
+    if (currentView === 'nodes') renderNodes();
+    if (panelCatId) renderPanel();
+  });
+}
+function setActiveScenario(id) {
+  if (id === activeScenarioId) return;
+  if (id !== 'base' && !scenarios[id]) return;
+  activeScenarioId = id;
+  settings.activeScenario = id;
+  fbSet('budget/settings/activeScenario', id);
+  bindScenarioListeners();
+  renderScenarioPills();
+  const label = id === 'base' ? 'Base' : (scenarios[id]?.name || 'Scenario');
+  toast('Switched to ' + label, 'info');
+}
+async function createScenario(name, cloneFromActive = true) {
+  const clean = (name || '').trim();
+  if (!clean) return;
+  const ref = db.ref('budget/scenarios').push();
+  const id = ref.key;
+  const payload = { name: clean, createdAt: new Date().toISOString() };
+  if (cloneFromActive) {
+    payload.plan = JSON.parse(JSON.stringify(plan || {}));
+    payload.planItems = JSON.parse(JSON.stringify(planItems || {}));
+  }
+  await ref.set(payload);
+  toast('Created "' + clean + '"', 'success');
+  setActiveScenario(id);
+}
+async function deleteScenario(id) {
+  if (id === 'base') { toast('Base cannot be deleted', 'warn'); return; }
+  if (!confirm('Delete this scenario? Its plan and items will be removed.')) return;
+  await fbRemove('budget/scenarios/' + id);
+  if (activeScenarioId === id) setActiveScenario('base');
+  toast('Scenario deleted', 'info');
+}
+function renderScenarioPills() {
+  const el = document.getElementById('scenGroup');
+  if (!el) return;
+  const list = [['base', { name:'Base' }], ...Object.entries(scenarios).sort((a,b) => (a[1].createdAt||'').localeCompare(b[1].createdAt||''))];
+  el.innerHTML = list.map(([id, s]) => {
+    const active = id === activeScenarioId;
+    const extra = id !== 'base' && active ? ` <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-error" onclick="event.stopPropagation(); deleteScenario('${id}')" title="Delete scenario">close</span>` : '';
+    return `<button class="scen-pill ${active?'active':''}" onclick="setActiveScenario('${id}')">${s.name}${extra}</button>`;
+  }).join('') + `<button class="scen-pill new-pill" onclick="promptNewScenario()" title="Clone active plan into a new scenario"><span class="material-symbols-outlined text-[15px]">add</span></button>`;
+}
+function promptNewScenario() {
+  const name = prompt('Name the new scenario (e.g. Optimistic, Pessimistic):', '');
+  if (name && name.trim()) createScenario(name.trim(), true);
+}
 
 const DEFAULT_CATS = {
   llc:    { name:'LLC Formation',   type:'expense', icon:'gavel',       color:'#8ff5ff', order:0 },
@@ -717,7 +964,9 @@ const DEFAULT_CATS = {
 // ════════════════════════════════════════
 //  VIEW SWITCHING
 // ════════════════════════════════════════
+const _VIEWS = ['dashboard','plan','expenses','outlook','compare','nodes','settings'];
 function switchView(v) {
+  if (!_VIEWS.includes(v)) v = 'dashboard';
   currentView = v;
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.getElementById('v-' + v).classList.add('active');
@@ -727,12 +976,16 @@ function switchView(v) {
     icon.style.fontVariationSettings = el.dataset.view === v ? "'FILL' 1" : "'FILL' 0";
   });
   document.getElementById('breadcrumb').textContent = v.charAt(0).toUpperCase() + v.slice(1);
+  if (location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
   if (v === 'nodes') renderNodes();
   if (v === 'dashboard') renderDashTopology();
   if (v === 'plan') renderPlan();
   if (v === 'outlook') renderOutlook();
   if (v === 'compare') renderCompare();
 }
+window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (h && h !== currentView) switchView(h); });
+// Apply initial hash on boot
+(() => { const h = location.hash.slice(1); if (h && _VIEWS.includes(h)) setTimeout(() => switchView(h), 0); })();
 
 // ════════════════════════════════════════
 //  INIT & LISTENERS
@@ -753,23 +1006,16 @@ fbListen('budget/transactions', data => {
   renderAll();
 });
 
-fbListen('budget/plan', data => {
-  plan = data || {};
-  if (currentView === 'plan') renderPlan();
-  if (currentView === 'outlook') renderOutlook();
-  if (currentView === 'compare') renderCompare();
-  if (currentView === 'dashboard') { renderKPIs(); renderDashHealth(); renderDashTopology(); }
-  if (panelCatId) renderPanel();
-});
-
-fbListen('budget/planItems', data => {
-  planItems = data || {};
-  if (currentView === 'plan') renderPlan();
-  if (currentView === 'outlook') renderOutlook();
-  if (currentView === 'compare') renderCompare();
-  if (currentView === 'dashboard') { renderKPIs(); renderDashHealth(); renderDashTopology(); }
-  if (currentView === 'nodes') renderNodes();
-  if (panelCatId) renderPanel();
+fbListen('budget/scenarios', data => {
+  // Ignore nested plan/planItems payloads — those are fetched under planPath() per-scenario.
+  const out = {};
+  if (data) {
+    Object.entries(data).forEach(([id, s]) => {
+      out[id] = { name: s.name || 'Scenario', createdAt: s.createdAt || '' };
+    });
+  }
+  scenarios = out;
+  renderScenarioPills();
 });
 
 fbListen('budget/settings', data => {
@@ -783,9 +1029,19 @@ fbListen('budget/settings', data => {
     const nameEl = document.getElementById('sideCoName'); if (nameEl && settings.companyName) nameEl.textContent = settings.companyName;
     applyAccent(settings.accent || 'cyan');
     applyReducedMotion(!!settings.reducedMotion);
+    // React to activeScenario changes coming from elsewhere
+    const desired = settings.activeScenario || 'base';
+    if (desired !== activeScenarioId && (desired === 'base' || scenarios[desired])) {
+      activeScenarioId = desired;
+      bindScenarioListeners();
+      renderScenarioPills();
+    }
     renderAll();
   }
 });
+
+// Bind the initial (Base) plan listeners right away
+bindScenarioListeners();
 
 function renderAll() {
   renderKPIs();
@@ -926,11 +1182,18 @@ function renderTable(filter) {
   const txArr = Object.entries(transactions).sort((a,b) => (b[1].date||'').localeCompare(a[1].date||''));
   const q = (filter || '').toLowerCase();
 
-  tbody.innerHTML = txArr.filter(([id, t]) => {
+  const filtered = txArr.filter(([id, t]) => {
     if (!q) return true;
     const cat = categories[t.categoryId] || {};
     return (t.description||'').toLowerCase().includes(q) || (cat.name||'').toLowerCase().includes(q);
-  }).map(([id, t]) => {
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><span class="material-symbols-outlined empty-glyph">receipt_long</span><div class="empty-title">${q ? 'No matches' : 'All quiet'}</div><div class="empty-hint">${q ? 'Try a different search term.' : 'Log your first expense to start the ledger.'}</div>${q ? '' : '<button class=\"btn btn-primary\" onclick=\"openModal()\"><span class=\"material-symbols-outlined\">add</span> New transaction</button>'}</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(([id, t]) => {
     const cat = categories[t.categoryId] || { name:'Uncategorized', icon:'help', color:'#6d7589' };
     const statusCls = t.status === 'processed' ? 'status-processed' : t.status === 'flagged' ? 'status-flagged' : 'status-pending';
     const txId = 'TX-' + id.slice(-6).toUpperCase();
@@ -1071,106 +1334,279 @@ function shiftPlanHorizon(delta) {
 }
 
 function renderPlan() {
-  const cats = Object.entries(categories)
+  const expCats = Object.entries(categories)
     .filter(([,c]) => c.type === 'expense')
+    .sort((a,b) => a[1].order - b[1].order);
+  const incCats = Object.entries(categories)
+    .filter(([,c]) => c.type === 'income')
     .sort((a,b) => a[1].order - b[1].order);
 
   const months = [];
   for (let i = 0; i < PLAN_MONTHS; i++) months.push({ offset: planHorizonOffset + i, key: monthKeyAt(planHorizonOffset + i), label: monthLabelAt(planHorizonOffset + i) });
 
-  const head = document.getElementById('planHead');
-  head.innerHTML = `
-    <tr class="text-left text-[10px] uppercase tracking-[0.15em] text-on-surface-variant border-b border-outline-variant/20">
-      <th class="px-4 py-4 font-semibold sticky left-0 bg-surface-container-low z-10 w-[220px]">Category</th>
-      ${months.map(m => `<th class="px-2 py-4 font-semibold text-right min-w-[88px]">${m.label}</th>`).join('')}
-      <th class="px-4 py-4 font-semibold text-right bg-surface-container/40 min-w-[100px]">Total</th>
-    </tr>`;
-
-  const body = document.getElementById('planBody');
-  body.innerHTML = cats.map(([id, cat]) => {
-    const rowTotal = months.reduce((s, m) => s + planCell(id, m.key), 0);
-    const itemCount = (planItems[id] ? Object.keys(planItems[id]).length : 0);
-    return `
-      <tr class="border-b border-outline-variant/10 hover:bg-surface-container/20 transition-colors">
-        <td class="px-4 py-3 sticky left-0 bg-surface-container-low z-10 cursor-pointer" onclick="openCategoryPanel('${id}')">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[18px]" style="color:${cat.color}">${cat.icon}</span>
-            <div class="flex flex-col">
-              <span class="font-headline text-sm font-bold text-on-surface">${cat.name}</span>
-              <span class="text-[10px] uppercase tracking-widest text-on-surface-variant">${itemCount ? itemCount + ' item' + (itemCount!==1?'s':'') : 'click to add items'}</span>
-            </div>
-            <span class="material-symbols-outlined text-[16px] ml-auto text-on-surface-variant group-hover:text-primary">chevron_right</span>
-          </div>
-        </td>
-        ${months.map(m => {
-          const items = itemsForCatMonth(id, m.key);
-          if (items.length) {
-            const sum = items.reduce((s, it) => s + (+it.amount || 0), 0);
-            return `<td class="px-1 py-2 text-right">
-              <div class="cell-items" onclick="openCategoryPanel('${id}','${m.key}')" title="${items.length} item${items.length!==1?'s':''} — click to edit">${sum ? fmtMoney(sum) : '—'}</div>
-            </td>`;
-          }
-          const v = planCell(id, m.key);
-          return `<td class="px-1 py-2 text-right">
-            <input type="number" inputmode="decimal" step="100"
-              class="plan-cell w-full bg-transparent text-right font-body text-sm text-on-surface border-b border-outline-variant/10 focus:border-primary focus:outline-none py-1 px-2 transition-colors"
-              value="${v || ''}" placeholder="0"
-              data-cat="${id}" data-month="${m.key}"
-              onchange="savePlanCell(this)"
-              onfocus="this.select()" />
-          </td>`;
-        }).join('')}
-        <td class="px-4 py-3 text-right bg-surface-container/40">
-          <span class="font-headline text-sm font-bold text-primary" data-row-total="${id}">${fmtMoney(rowTotal)}</span>
-        </td>
-      </tr>`;
-  }).join('');
-
-  const foot = document.getElementById('planFoot');
-  const colTotals = months.map(m => cats.reduce((s, [id]) => s + planCell(id, m.key), 0));
-  const grand = colTotals.reduce((s, v) => s + v, 0);
-  foot.innerHTML = `
-    <tr class="text-xs uppercase tracking-widest text-on-surface-variant border-t border-outline-variant/30 bg-surface-container/20">
-      <td class="px-4 py-4 sticky left-0 bg-surface-container-low z-10 font-bold">Monthly Total</td>
-      ${colTotals.map(t => `<td class="px-2 py-4 text-right font-headline text-sm text-on-surface">${fmtMoney(t)}</td>`).join('')}
-      <td class="px-4 py-4 text-right bg-surface-container/40 font-headline text-base text-primary glow-text">${fmtMoney(grand)}</td>
-    </tr>`;
-
+  // Totals strip (still shown above the Sankey)
+  const grand = expCats.reduce((s, [id]) => s + months.reduce((mm, m) => mm + planCell(id, m.key), 0), 0);
   const seed = parseFloat(settings.seedTarget) || 0;
   const pctOfSeed = seed ? (grand / seed) * 100 : 0;
   const avgMonthly = grand / PLAN_MONTHS;
   document.getElementById('planTotals').innerHTML = `
-    <div class="bg-surface-container-low rounded-xl p-6 glow-box">
-      <div class="text-xs uppercase tracking-widest text-on-surface-variant mb-2">Total Planned (${PLAN_MONTHS} mo)</div>
-      <div class="font-headline text-3xl font-light text-primary glow-text">${fmtMoney(grand)}</div>
+    <div class="bg-surface-container-low/70 rounded-xl p-6 glow-box">
+      <div class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant mb-3 font-semibold">Total Planned · ${PLAN_MONTHS}mo</div>
+      <div class="font-headline text-4xl font-light" style="color:var(--accent)">${fmtMoney(grand)}</div>
     </div>
-    <div class="bg-surface-container-low rounded-xl p-6 glow-box">
-      <div class="text-xs uppercase tracking-widest text-on-surface-variant mb-2">Avg Monthly Burn</div>
-      <div class="font-headline text-3xl font-light text-on-surface">${fmtMoney(avgMonthly)}</div>
+    <div class="bg-surface-container-low/70 rounded-xl p-6 glow-box">
+      <div class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant mb-3 font-semibold">Avg Monthly</div>
+      <div class="font-headline text-4xl font-light text-on-surface">${fmtMoney(avgMonthly)}</div>
     </div>
-    <div class="bg-surface-container-low rounded-xl p-6 glow-box">
-      <div class="text-xs uppercase tracking-widest text-on-surface-variant mb-2">% of Seed Target</div>
-      <div class="font-headline text-3xl font-light text-on-surface">${pctOfSeed.toFixed(1)}%</div>
-      <div class="text-[10px] text-on-surface-variant mt-1">Seed: ${fmtMoney(seed)}</div>
+    <div class="bg-surface-container-low/70 rounded-xl p-6 glow-box">
+      <div class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant mb-3 font-semibold">% of Seed Target</div>
+      <div class="font-headline text-4xl font-light text-on-surface">${pctOfSeed.toFixed(1)}<span class="text-xl text-on-surface-variant ml-1">%</span></div>
+      <div class="text-[11px] text-on-surface-variant mt-1">Seed target · ${fmtMoney(seed)}</div>
     </div>`;
+
+  renderPlanSankey(expCats, incCats, months, grand);
 }
 
-function savePlanCell(inp) {
-  const cat = inp.dataset.cat, mo = inp.dataset.month;
-  const val = parseFloat(inp.value) || 0;
-  const items = itemsForCatMonth(cat, mo);
-  if (items.length) {
-    const go = confirm(`This cell is the sum of ${items.length} line item(s). Edit them instead?`);
-    if (go) { openCategoryPanel(cat, mo); return; }
-    inp.value = items.reduce((s, it) => s + (+it.amount || 0), 0);
+function renderPlanSankey(expCats, incCats, months, grand) {
+  const host = document.getElementById('planSankey');
+  if (!host) return;
+  host.innerHTML = '';
+
+  if (!expCats.length || grand <= 0) {
+    host.innerHTML = `
+      <div class="empty">
+        <span class="material-symbols-outlined empty-glyph">waterfall_chart</span>
+        <div class="empty-title">Nothing to pour yet</div>
+        <div class="empty-hint">Add a planned amount or a line item to any category and the Sankey will flow from sources through months into bays.</div>
+        <button class="btn btn-primary" onclick="openCategoryPanel('${expCats[0]?.[0] || ''}')" ${expCats.length ? '' : 'disabled'}>
+          <span class="material-symbols-outlined">add</span> Start planning
+        </button>
+      </div>`;
     return;
   }
-  const path = 'budget/plan/' + cat + '/' + mo;
-  if (val === 0) db.ref(path).remove();
-  else fbSet(path, val);
+  if (typeof d3 === 'undefined' || !d3.sankey) {
+    host.innerHTML = `<div class="empty"><span class="material-symbols-outlined empty-glyph">cloud_off</span><div class="empty-title">Chart library didn't load</div><div class="empty-hint">Check your connection and reload. Falling back to the plan data in Outlook and Compare for now.</div></div>`;
+    return;
+  }
+
+  // Nodes: [sources] + [months] + [categories]
+  const sourceNodes = incCats.length
+    ? incCats.map(([id, c]) => ({ id: 'src::' + id, kind: 'source', ref: id, label: c.name, color: c.color }))
+    : [{ id: 'src::reserve', kind: 'source', ref: null, label: 'Reserve', color: '#8596ff' }];
+  const monthNodes = months.map(m => ({ id: 'mo::' + m.key, kind: 'month', ref: m.key, label: m.label, color: '#6d7589' }));
+  const catNodes = expCats.map(([id, c]) => ({ id: 'cat::' + id, kind: 'cat', ref: id, label: c.name, color: c.color, icon: c.icon }));
+  const nodes = [...sourceNodes, ...monthNodes, ...catNodes];
+  const idx = new Map(nodes.map((n, i) => [n.id, i]));
+
+  // Links: source -> month (proportional to month total) and month -> cat (actual planned amount)
+  const links = [];
+  const monthTotals = months.map(m => expCats.reduce((s, [id]) => s + planCell(id, m.key), 0));
+  const totalAcrossMonths = monthTotals.reduce((s, v) => s + v, 0) || 1;
+
+  // Source -> month (split proportionally across sources by their planned income if any, else 100% to the single reserve/source)
+  months.forEach((m, mi) => {
+    const monthTotal = monthTotals[mi];
+    if (monthTotal <= 0) return;
+    if (sourceNodes.length === 1) {
+      links.push({ source: idx.get(sourceNodes[0].id), target: idx.get('mo::' + m.key), value: monthTotal, sColor: sourceNodes[0].color });
+    } else {
+      // Weight by planned income per month per source
+      const weights = sourceNodes.map(s => planCell(s.ref, m.key) || 0);
+      const wSum = weights.reduce((a, b) => a + b, 0);
+      sourceNodes.forEach((s, i) => {
+        const w = wSum > 0 ? (weights[i] / wSum) : (1 / sourceNodes.length);
+        const v = monthTotal * w;
+        if (v > 0) links.push({ source: idx.get(s.id), target: idx.get('mo::' + m.key), value: v, sColor: s.color });
+      });
+    }
+  });
+
+  // Month -> cat (actual planned per cat per month)
+  months.forEach(m => {
+    expCats.forEach(([id, c]) => {
+      const v = planCell(id, m.key);
+      if (v > 0) links.push({ source: idx.get('mo::' + m.key), target: idx.get('cat::' + id), value: v, tColor: c.color, catId: id, monthKey: m.key });
+    });
+  });
+
+  if (!links.length) {
+    host.innerHTML = `
+      <div class="empty">
+        <span class="material-symbols-outlined empty-glyph">water_drop</span>
+        <div class="empty-title">All zeros across the horizon</div>
+        <div class="empty-hint">Click a bay to add line items, or set a planned amount in the drill-in panel.</div>
+        <button class="btn btn-primary" onclick="openCategoryPanel('${expCats[0][0]}')"><span class="material-symbols-outlined">add</span> Start planning</button>
+      </div>`;
+    return;
+  }
+
+  const W = host.clientWidth || 1000;
+  const rowsCount = Math.max(sourceNodes.length, monthNodes.length, catNodes.length);
+  const H = Math.max(520, rowsCount * 34 + 80);
+  // Reserve horizontal room for left/right labels so bay names don't clip.
+  const leftPad = 110, rightPad = 160;
+
+  const gen = d3.sankey()
+    .nodeWidth(14)
+    .nodePadding(14)
+    .extent([[leftPad, 28], [W - rightPad, H - 28]])
+    .nodeId(n => n.index);
+
+  const graph = gen({
+    nodes: nodes.map((n, i) => ({ ...n, index: i })),
+    links: links.map(l => ({ ...l })),
+  });
+
+  const svgns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  host.appendChild(svg);
+
+  // gradients per link (source color -> target color)
+  const defs = document.createElementNS(svgns, 'defs');
+  svg.appendChild(defs);
+  graph.links.forEach((l, i) => {
+    const grad = document.createElementNS(svgns, 'linearGradient');
+    grad.setAttribute('id', 'sk-grad-' + i);
+    grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+    grad.setAttribute('x1', l.source.x1);
+    grad.setAttribute('x2', l.target.x0);
+    const s = document.createElementNS(svgns, 'stop');
+    s.setAttribute('offset', '0%'); s.setAttribute('stop-color', l.sColor || l.source.color || '#8596ff'); s.setAttribute('stop-opacity', '0.7');
+    const t = document.createElementNS(svgns, 'stop');
+    t.setAttribute('offset', '100%'); t.setAttribute('stop-color', l.tColor || l.target.color || '#8ff5ff'); t.setAttribute('stop-opacity', '0.7');
+    grad.appendChild(s); grad.appendChild(t); defs.appendChild(grad);
+  });
+
+  // Links
+  const linkGen = d3.sankeyLinkHorizontal();
+  const reduced = !!settings.reducedMotion;
+  const linkGroup = document.createElementNS(svgns, 'g');
+  linkGroup.setAttribute('fill', 'none');
+  graph.links.forEach((l, i) => {
+    const path = document.createElementNS(svgns, 'path');
+    const d = linkGen(l);
+    path.setAttribute('d', d);
+    path.setAttribute('stroke', 'url(#sk-grad-' + i + ')');
+    path.setAttribute('stroke-width', Math.max(1, l.width));
+    path.setAttribute('stroke-opacity', '0.35');
+    path.setAttribute('class', 'sankey-link' + (reduced ? '' : ' sankey-link-reveal'));
+    path.addEventListener('mouseenter', (e) => {
+      path.setAttribute('stroke-opacity', '0.75');
+      showSankeyTip(e, linkTipHTML(l));
+    });
+    path.addEventListener('mousemove', (e) => moveSankeyTip(e));
+    path.addEventListener('mouseleave', () => { path.setAttribute('stroke-opacity', '0.35'); hideSankeyTip(); });
+    path.addEventListener('click', () => {
+      if (l.catId) openCategoryPanel(l.catId, l.monthKey);
+      else if (l.source.kind === 'source' && l.target.kind === 'month') openMonthPanel(l.target.ref);
+    });
+    if (!reduced) {
+      const len = path.getTotalLength ? path.getTotalLength() : 600;
+      path.style.strokeDasharray = len;
+      path.style.strokeDashoffset = len;
+      path.style.transition = `stroke-dashoffset 0.9s cubic-bezier(.4,0,.2,1) ${i * 8}ms`;
+      requestAnimationFrame(() => { path.style.strokeDashoffset = '0'; });
+    }
+    linkGroup.appendChild(path);
+  });
+  svg.appendChild(linkGroup);
+
+  // Nodes
+  const nodeGroup = document.createElementNS(svgns, 'g');
+  nodeGroup.setAttribute('class', 'sankey-nodes');
+  graph.nodes.forEach(n => {
+    const g = document.createElementNS(svgns, 'g');
+    g.setAttribute('class', 'sankey-node');
+    g.setAttribute('transform', `translate(${n.x0},${n.y0})`);
+    const rect = document.createElementNS(svgns, 'rect');
+    rect.setAttribute('width', Math.max(2, n.x1 - n.x0));
+    rect.setAttribute('height', Math.max(2, n.y1 - n.y0));
+    rect.setAttribute('fill', n.color || '#6d7589');
+    rect.setAttribute('opacity', n.kind === 'month' ? 0.55 : 0.88);
+    rect.setAttribute('rx', '2');
+    rect.style.color = n.color || '#6d7589';
+    if (n.kind === 'cat') {
+      rect.addEventListener('click', () => openCategoryPanel(n.ref));
+    } else if (n.kind === 'month') {
+      rect.addEventListener('click', () => openMonthPanel(n.ref));
+    }
+    rect.addEventListener('mouseenter', (e) => showSankeyTip(e, nodeTipHTML(n)));
+    rect.addEventListener('mousemove', (e) => moveSankeyTip(e));
+    rect.addEventListener('mouseleave', hideSankeyTip);
+    g.appendChild(rect);
+
+    // Labels only appear if the node has real mass. Empty months / bays stay unlabeled to avoid stacking.
+    const h = n.y1 - n.y0;
+    const w = n.x1 - n.x0;
+    if (n.value > 0 || n.kind === 'source') {
+      const text = document.createElementNS(svgns, 'text');
+      if (n.kind === 'source') {
+        text.setAttribute('x', -10); text.setAttribute('y', h / 2 + 4); text.setAttribute('text-anchor', 'end');
+      } else if (n.kind === 'cat') {
+        text.setAttribute('x', w + 10); text.setAttribute('y', h / 2 + 4); text.setAttribute('text-anchor', 'start');
+      } else { // month
+        text.setAttribute('x', w / 2); text.setAttribute('y', -8); text.setAttribute('text-anchor', 'middle');
+      }
+      text.textContent = n.label;
+      g.appendChild(text);
+
+      if (n.kind !== 'month' && h > 28) {
+        const sub = document.createElementNS(svgns, 'text');
+        sub.setAttribute('class', 'sub');
+        if (n.kind === 'source') { sub.setAttribute('x', -10); sub.setAttribute('y', h / 2 + 18); sub.setAttribute('text-anchor', 'end'); }
+        else { sub.setAttribute('x', w + 10); sub.setAttribute('y', h / 2 + 18); sub.setAttribute('text-anchor', 'start'); }
+        sub.textContent = fmtMoney(n.value);
+        g.appendChild(sub);
+      }
+    }
+    nodeGroup.appendChild(g);
+  });
+  svg.appendChild(nodeGroup);
+}
+
+function linkTipHTML(l) {
+  const from = l.source.label, to = l.target.label;
+  return `<div class="t-label" style="color:${l.target.color || '#dde5fb'}">${from} → ${to}</div><div class="t-sub">${fmtMoney(l.value)}</div>`;
+}
+function nodeTipHTML(n) {
+  const kindLabel = n.kind === 'source' ? 'Source' : (n.kind === 'month' ? 'Month' : 'Bay');
+  return `<div class="t-label" style="color:${n.color || '#dde5fb'}">${n.label}</div><div class="t-sub">${kindLabel} · ${fmtMoney(n.value)}</div>`;
+}
+let _sankeyTip = null;
+function ensureSankeyTip() {
+  if (_sankeyTip) return _sankeyTip;
+  _sankeyTip = document.createElement('div');
+  _sankeyTip.className = 'sankey-tooltip';
+  document.body.appendChild(_sankeyTip);
+  return _sankeyTip;
+}
+function showSankeyTip(e, html) { const t = ensureSankeyTip(); t.innerHTML = html; t.classList.add('show'); moveSankeyTip(e); }
+function moveSankeyTip(e) { if (!_sankeyTip) return; _sankeyTip.style.left = e.clientX + 'px'; _sankeyTip.style.top = e.clientY + 'px'; }
+function hideSankeyTip() { if (_sankeyTip) _sankeyTip.classList.remove('show'); }
+
+function openMonthPanel(monthKey) {
+  // Month drill: open panel on the first expense category filtered to that month.
+  const firstExp = Object.entries(categories).filter(([,c]) => c.type === 'expense').sort((a,b) => a[1].order - b[1].order)[0];
+  if (firstExp) openCategoryPanel(firstExp[0], monthKey);
+}
+
+window.addEventListener('resize', () => { if (currentView === 'plan') renderPlan(); });
+
+function savePlanCell(cat, mo, val) {
+  val = parseFloat(val) || 0;
+  const items = itemsForCatMonth(cat, mo);
+  if (items.length) {
+    toast('That cell is driven by line items', 'warn');
+    openCategoryPanel(cat, mo);
+    return;
+  }
+  const path = planPath() + '/' + cat + '/' + mo;
+  if (val === 0) db.ref(path).remove(); else fbSet(path, val);
   if (!plan[cat]) plan[cat] = {};
   if (val === 0) delete plan[cat][mo]; else plan[cat][mo] = val;
-  renderPlan();
+  toast('Saved ' + fmtMoney(val), 'success', { ttl: 1800 });
 }
 
 // ════════════════════════════════════════
@@ -1306,7 +1742,7 @@ function addPanelItem() {
   const monthSel = document.getElementById('panelMonthFilter');
   const defaultMonth = (monthSel.value && monthSel.value !== 'all') ? monthSel.value : monthKeyAt(0);
   const order = Object.keys(planItems[panelCatId] || {}).length;
-  fbPush('budget/planItems/' + panelCatId, {
+  fbPush(planItemsPath() + '/' + panelCatId, {
     name: '',
     amount: 0,
     month: defaultMonth,
@@ -1315,15 +1751,17 @@ function addPanelItem() {
     order,
     ts: new Date().toISOString(),
   });
+  toast('Line item added', 'success', { ttl: 1600 });
 }
 function updatePanelItem(itemId, field, value) {
   if (!panelCatId) return;
-  fbSet('budget/planItems/' + panelCatId + '/' + itemId + '/' + field, value);
+  fbSet(planItemsPath() + '/' + panelCatId + '/' + itemId + '/' + field, value);
 }
 function deletePanelItem(itemId) {
   if (!panelCatId) return;
   if (!confirm('Delete this line item?')) return;
-  fbRemove('budget/planItems/' + panelCatId + '/' + itemId);
+  fbRemove(planItemsPath() + '/' + panelCatId + '/' + itemId);
+  toast('Line item removed', 'info', { ttl: 1600 });
 }
 
 // ════════════════════════════════════════
@@ -1886,9 +2324,9 @@ function initFwBg() {
         float t = uTime * 0.05;
         float f = sn(uv*2.4 + vec2(t, -t*0.8));
         f = mix(f, sn(uv*5.5 - vec2(t*1.3, t*0.6)), 0.55);
-        vec3 base = vec3(0.02, 0.04, 0.09);
-        vec3 mid  = mix(base, uAccent * 0.20, smoothstep(0.25, 0.9, f));
-        vec3 warm = mix(mid, vec3(0.17, 0.07, 0.25), smoothstep(0.55, 1.0, sn(uv*1.2 + t)));
+        vec3 base = vec3(0.015, 0.03, 0.07);
+        vec3 mid  = mix(base, uAccent * 0.13, smoothstep(0.25, 0.9, f));
+        vec3 warm = mix(mid, vec3(0.11, 0.05, 0.18), smoothstep(0.55, 1.0, sn(uv*1.2 + t)));
         float vig = smoothstep(1.1, 0.3, length(uv - 0.5));
         gl_FragColor = vec4(warm * vig, 1.0);
       }`,
@@ -1899,8 +2337,8 @@ function initFwBg() {
   const bgScene = new THREE.Scene(); bgScene.add(fwMesh);
   fwScene.userData.bg = bgScene;
 
-  // Drifting particles
-  const pCount = 120;
+  // Drifting particles — quieter
+  const pCount = 55;
   const positions = new Float32Array(pCount * 3);
   const colors = new Float32Array(pCount * 3);
   const base = new THREE.Color(0x8596ff), accent = new THREE.Color(accentHex());
@@ -1915,15 +2353,15 @@ function initFwBg() {
   pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   pGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   const pMat = new THREE.PointsMaterial({
-    size: 0.06, vertexColors: true, transparent: true, opacity: 0.75,
+    size: 0.05, vertexColors: true, transparent: true, opacity: 0.4,
     blending: THREE.AdditiveBlending, depthWrite: false
   });
   fwParticles = new THREE.Points(pGeo, pMat);
   fwScene.add(fwParticles);
 
-  // Wireframe octahedron
+  // Wireframe octahedron — dimmer
   const polyGeo = new THREE.OctahedronGeometry(1.6, 0);
-  const polyMat = new THREE.MeshBasicMaterial({ color: accentHex(), wireframe: true, transparent: true, opacity: 0.12 });
+  const polyMat = new THREE.MeshBasicMaterial({ color: accentHex(), wireframe: true, transparent: true, opacity: 0.07 });
   fwPoly = new THREE.Mesh(polyGeo, polyMat);
   fwPoly.position.set(0, 0, -3);
   fwScene.add(fwPoly);
@@ -1952,13 +2390,13 @@ function fwTick() {
   if (fwParticles) {
     const pos = fwParticles.geometry.attributes.position.array;
     for (let i = 0; i < pos.length; i += 3) {
-      pos[i] += Math.sin(t * 0.2 + i) * 0.0008;
-      pos[i+1] += Math.cos(t * 0.15 + i) * 0.0006;
+      pos[i] += Math.sin(t * 0.12 + i) * 0.0005;
+      pos[i+1] += Math.cos(t * 0.09 + i) * 0.0004;
     }
     fwParticles.geometry.attributes.position.needsUpdate = true;
-    fwParticles.rotation.z = t * 0.01;
+    fwParticles.rotation.z = t * 0.005;
   }
-  if (fwPoly) { fwPoly.rotation.x = t * 0.05; fwPoly.rotation.y = t * 0.07; }
+  if (fwPoly) { fwPoly.rotation.x = t * 0.025; fwPoly.rotation.y = t * 0.035; }
 
   // Render bg plane first, then main
   const bg = fwScene.userData.bg;
@@ -2159,8 +2597,8 @@ function nodeTick() {
   if (settings.reducedMotion) {
     // still render a single frame; no rotation
   } else {
-    if (nodeHubMesh) nodeHubMesh.rotation.y += 0.004;
-    nodeBays.forEach(b => { b.group.rotation.y += 0.002; });
+    if (nodeHubMesh) nodeHubMesh.rotation.y += 0.0025;
+    nodeBays.forEach(b => { b.group.rotation.y += 0.0012; });
   }
   if (nodeRenderer) nodeRenderer.render(nodeScene, nodeCamera);
 }
@@ -2249,8 +2687,8 @@ function refreshDashLatticeColors() {
 function dashTick() {
   dashRafId = requestAnimationFrame(dashTick);
   if (!settings.reducedMotion && dashScene) {
-    dashScene.rotation.y += 0.003;
-    if (dashHub) dashHub.rotation.y -= 0.006;
+    dashScene.rotation.y += 0.0018;
+    if (dashHub) dashHub.rotation.y -= 0.0035;
   }
   if (dashRenderer) dashRenderer.render(dashScene, dashCamera);
 }
@@ -2302,14 +2740,15 @@ function saveTx() {
     notes: document.getElementById('txNotes').value.trim(),
     ts: new Date().toISOString(),
   };
-  if (!data.description || !data.amount) return;
+  if (!data.description || !data.amount) { toast('Description and amount are required', 'warn'); return; }
   if (editId) fbSet('budget/transactions/' + editId, data);
   else fbPush('budget/transactions', data);
+  toast(editId ? 'Transaction updated' : 'Transaction saved', 'success');
   closeModal();
 }
 
 function editTx(id) { openModal(id); }
-function deleteTx(id) { if (confirm('Delete this transaction?')) fbRemove('budget/transactions/' + id); }
+function deleteTx(id) { if (confirm('Delete this transaction?')) { fbRemove('budget/transactions/' + id); toast('Transaction removed', 'info'); } }
 
 // ════════════════════════════════════════
 //  SETTINGS
@@ -2323,14 +2762,18 @@ function saveSettings() {
     fiscalYearStart: document.getElementById('sFiscal').value,
     accent: settings.accent || 'cyan',
     reducedMotion: !!settings.reducedMotion,
+    activeScenario: settings.activeScenario || 'base',
   });
   const nameEl = document.getElementById('sideCoName'); if (nameEl && nextName) nameEl.textContent = nextName;
+  toast('Settings saved', 'success');
 }
 function setAccent(a) {
   settings.accent = a;
   applyAccent(a);
   fbSet('budget/settings/accent', a);
   updateWebGLAccent();
+  if (currentView === 'plan') renderPlan();
+  toast('Accent: ' + a, 'info', { ttl: 1400 });
 }
 function applyAccent(a) {
   const root = document.documentElement;
@@ -2395,9 +2838,217 @@ function exportExcel() {
   XLSX.writeFile(wb, 'formwork_budget_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
+// ════════════════════════════════════════
+//  COMMAND PALETTE
+// ════════════════════════════════════════
+let cmdOpen = false, cmdResults = [], cmdSel = 0;
+const CMD_RECENT_KEY = 'fw.cmd.recent';
+
+function cmdActions() {
+  const actions = [
+    { id:'nav.dashboard', group:'Go to', label:'Dashboard',  icon:'dashboard',       run: () => switchView('dashboard') },
+    { id:'nav.plan',      group:'Go to', label:'Plan',       icon:'calendar_month',  run: () => switchView('plan') },
+    { id:'nav.expenses',  group:'Go to', label:'Expenses',   icon:'payments',        run: () => switchView('expenses') },
+    { id:'nav.outlook',   group:'Go to', label:'Outlook',    icon:'query_stats',     run: () => switchView('outlook') },
+    { id:'nav.compare',   group:'Go to', label:'Compare',    icon:'compare_arrows',  run: () => switchView('compare') },
+    { id:'nav.nodes',     group:'Go to', label:'Nodes',      icon:'account_tree',    run: () => switchView('nodes') },
+    { id:'nav.settings',  group:'Go to', label:'Settings',   icon:'settings',        run: () => switchView('settings') },
+    { id:'new.tx',        group:'Create', label:'New transaction', icon:'add_circle',   run: () => openModal() },
+    { id:'new.item',      group:'Create', label:'New line item (active bay)', icon:'add_task', run: () => { if (panelCatId) addPanelItem(); else { toast('Open a bay first','warn'); } } },
+    { id:'new.scenario',  group:'Scenario', label:'Clone plan into new scenario…', icon:'content_copy', run: promptNewScenario },
+    { id:'scen.base',     group:'Scenario', label:'Switch to Base', icon:'restart_alt', run: () => setActiveScenario('base') },
+    ...Object.entries(scenarios).map(([id, s]) => ({
+      id: 'scen.' + id, group:'Scenario', label: 'Switch to ' + (s.name || 'Scenario'), icon:'splitscreen', run: () => setActiveScenario(id),
+    })),
+    { id:'export.xlsx',   group:'Export', label:'Export budget (.xlsx)', icon:'download', run: exportBudgetXlsx },
+    { id:'export.quick',  group:'Export', label:'Quick export transactions', icon:'file_download', run: exportExcel },
+    { id:'toggle.motion', group:'Toggle', label:'Reduced motion on/off', icon:'motion_photos_off', run: () => setReducedMotion(!settings.reducedMotion) },
+    { id:'toggle.cyan',   group:'Toggle', label:'Accent · Cyan',   icon:'palette', run: () => setAccent('cyan') },
+    { id:'toggle.violet', group:'Toggle', label:'Accent · Violet', icon:'palette', run: () => setAccent('violet') },
+    { id:'toggle.amber',  group:'Toggle', label:'Accent · Amber',  icon:'palette', run: () => setAccent('amber') },
+  ];
+  return actions;
+}
+
+function cmdScore(q, label) {
+  if (!q) return 0;
+  q = q.toLowerCase(); label = label.toLowerCase();
+  if (label.startsWith(q)) return 1000 - label.length;
+  if (label.includes(' ' + q)) return 800 - label.length;
+  if (label.includes(q)) return 600 - label.length;
+  // Subsequence
+  let li = 0, score = 0;
+  for (let qi = 0; qi < q.length; qi++) {
+    const c = q[qi];
+    const fi = label.indexOf(c, li);
+    if (fi === -1) return -1;
+    score += 10 - Math.min(9, fi - li);
+    li = fi + 1;
+  }
+  return 300 + score - label.length;
+}
+
+function renderCmdList() {
+  const input = document.getElementById('cmdInput');
+  const list = document.getElementById('cmdList');
+  const q = (input.value || '').trim();
+  const all = cmdActions();
+  const recent = JSON.parse(localStorage.getItem(CMD_RECENT_KEY) || '[]');
+  let results;
+  if (!q) {
+    const recentObjs = recent.map(id => all.find(a => a.id === id)).filter(Boolean);
+    const others = all.filter(a => !recent.includes(a.id));
+    results = recentObjs.map(a => ({ ...a, _group: 'Recent' })).concat(others);
+  } else {
+    results = all.map(a => ({ ...a, _score: cmdScore(q, a.label) })).filter(a => a._score > 0).sort((a, b) => b._score - a._score);
+  }
+  cmdResults = results.slice(0, 50);
+  cmdSel = 0;
+
+  if (!cmdResults.length) {
+    list.innerHTML = `<div class="empty" style="padding:2rem"><span class="material-symbols-outlined empty-glyph">search_off</span><div class="empty-title">No matches</div><div class="empty-hint">Try another keyword.</div></div>`;
+    return;
+  }
+
+  // Group when no query
+  const byGroup = {};
+  cmdResults.forEach(r => { const g = r._group || r.group; (byGroup[g] = byGroup[g] || []).push(r); });
+  let html = '';
+  Object.entries(byGroup).forEach(([g, items]) => {
+    html += `<div class="cmd-group-label">${g}</div>`;
+    items.forEach(it => {
+      const idxAll = cmdResults.indexOf(it);
+      html += `<div class="cmd-item ${idxAll === cmdSel ? 'active' : ''}" data-idx="${idxAll}" onmouseenter="cmdSetSel(${idxAll})" onclick="cmdRun(${idxAll})">
+        <span class="material-symbols-outlined">${it.icon}</span>
+        <span class="cmd-item-label">${it.label}</span>
+        ${idxAll === cmdSel ? '<span class="cmd-item-hint">↵</span>' : ''}
+      </div>`;
+    });
+  });
+  list.innerHTML = html;
+}
+
+function cmdSetSel(i) {
+  cmdSel = i;
+  document.querySelectorAll('.cmd-item').forEach(el => {
+    const on = +el.dataset.idx === i;
+    el.classList.toggle('active', on);
+  });
+}
+function cmdRun(i) {
+  const a = cmdResults[i];
+  if (!a) return;
+  // Persist to recents
+  const recent = JSON.parse(localStorage.getItem(CMD_RECENT_KEY) || '[]').filter(x => x !== a.id);
+  recent.unshift(a.id);
+  localStorage.setItem(CMD_RECENT_KEY, JSON.stringify(recent.slice(0, 5)));
+  closeCmdPalette();
+  a.run();
+}
+function openCmdPalette() {
+  cmdOpen = true;
+  document.getElementById('cmdOverlay').classList.add('show');
+  const inp = document.getElementById('cmdInput');
+  inp.value = ''; inp.focus();
+  renderCmdList();
+}
+function closeCmdPalette() {
+  cmdOpen = false;
+  document.getElementById('cmdOverlay').classList.remove('show');
+}
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); cmdOpen ? closeCmdPalette() : openCmdPalette(); return; }
+  if (!cmdOpen) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeCmdPalette(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (cmdResults.length) cmdSetSel((cmdSel + 1) % cmdResults.length); }
+  else if (e.key === 'ArrowUp')   { e.preventDefault(); if (cmdResults.length) cmdSetSel((cmdSel - 1 + cmdResults.length) % cmdResults.length); }
+  else if (e.key === 'Enter')     { e.preventDefault(); cmdRun(cmdSel); }
+});
+setTimeout(() => {
+  const inp = document.getElementById('cmdInput');
+  if (inp) inp.addEventListener('input', renderCmdList);
+}, 50);
+
+// ════════════════════════════════════════
+//  HEALTH GAUGE
+// ════════════════════════════════════════
+function renderHealthGauge() {
+  const el = document.getElementById('healthGauge');
+  if (!el) return;
+  const cats = Object.entries(categories).filter(([,c]) => c.type === 'expense');
+  const txArr = Object.values(transactions);
+  const totalExpense = txArr.filter(t => (categories[t.categoryId]||{}).type === 'expense').reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+  const now = Date.now();
+  const recent = txArr.filter(t => (categories[t.categoryId]||{}).type === 'expense' && (now - new Date(t.date).getTime()) < 30 * 86400000);
+  const monthlyBurn = recent.reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+  const seed = parseFloat(settings.seedTarget) || 0;
+  const runwayMonths = monthlyBurn > 0 ? (seed - totalExpense) / monthlyBurn : 12;
+  const runwayScore = Math.max(0, Math.min(1, runwayMonths / 12));
+
+  let over = 0;
+  cats.forEach(([id]) => {
+    const p = planRowTotal(id), a = actualRowTotal(id);
+    if (p > 0 && a > p) over++;
+  });
+  const onPlanScore = cats.length ? Math.max(0, 1 - over / cats.length) : 1;
+
+  // Upcoming-items coverage: items due in next 30 days that are committed OR done
+  const in30 = new Date(now + 30 * 86400000);
+  const uniqKeys = new Set();
+  for (let d = new Date(now); d <= in30; d.setMonth(d.getMonth() + 1)) uniqKeys.add(d.toISOString().slice(0, 7));
+  uniqKeys.add(in30.toISOString().slice(0, 7));
+  let upcomingCount = 0, upcomingReady = 0;
+  Object.values(planItems).forEach(byId => Object.values(byId || {}).forEach(it => {
+    if (!uniqKeys.has(it.month)) return;
+    upcomingCount++;
+    if (it.status === 'committed' || it.status === 'done') upcomingReady++;
+  }));
+  const upcomingScore = upcomingCount ? (upcomingReady / upcomingCount) : 1;
+
+  const score = Math.round((0.4 * runwayScore + 0.3 * onPlanScore + 0.3 * upcomingScore) * 100);
+  const color = score >= 70 ? 'var(--accent)' : (score >= 40 ? '#f5b759' : '#ff716c');
+  const C = 2 * Math.PI * 66;
+  const offset = C * (1 - score / 100);
+
+  el.innerHTML = `
+    <div class="gauge-wrap" title="Runway 40% · On-plan 30% · Upcoming 30%">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <circle cx="80" cy="80" r="66" fill="none" stroke="rgba(109,117,137,0.18)" stroke-width="10"/>
+        <circle cx="80" cy="80" r="66" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
+                stroke-dasharray="${C}" stroke-dashoffset="${C}" style="transition:stroke-dashoffset 1.1s cubic-bezier(.3,0,.2,1); filter:drop-shadow(0 0 6px ${color});" id="gaugeRing"/>
+      </svg>
+      <div class="gauge-value">
+        <div class="num" style="color:${color}">${score}</div>
+        <div class="lbl">Health</div>
+      </div>
+    </div>`;
+  requestAnimationFrame(() => { const r = document.getElementById('gaugeRing'); if (r) r.setAttribute('stroke-dashoffset', offset); });
+}
+
+// Keep gauge in sync with transactions too
+const _origRenderTable = renderTable;
+renderTable = function(...args) { _origRenderTable.apply(this, args); renderHealthGauge(); };
+
+// ════════════════════════════════════════
+//  BOOT ANIMATION
+// ════════════════════════════════════════
+function runBootAnim() {
+  const el = document.getElementById('bootOverlay');
+  if (!el) return;
+  if (settings.reducedMotion || sessionStorage.getItem('fw.booted')) {
+    el.style.display = 'none';
+    return;
+  }
+  sessionStorage.setItem('fw.booted', '1');
+  setTimeout(() => {
+    el.classList.add('fade-out');
+    setTimeout(() => { el.style.display = 'none'; }, 500);
+  }, 950);
+}
+
 // Set default date + boot WebGL after DOM paints
 document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
-requestAnimationFrame(() => initFwBg());
+requestAnimationFrame(() => { initFwBg(); runBootAnim(); });
 </script>
 </body>
 </html>

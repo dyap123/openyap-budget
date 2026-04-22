@@ -1,5 +1,53 @@
 # FORMWORK Devlog
 
+## 2026-04-21 — Sankey Plan, scenarios, Cmd-K, health gauge, quieter skin
+
+A deeper overhaul aimed at "immersive, cleaner, more minimal, nicer animations and buttons" — and killing the Excel-grid feel of the Plan view. Same single-file deploy, same Firebase, no build step.
+
+### Plan view is now a Sankey flow
+- HTML table replaced with a D3 + d3-sankey diagram at `renderPlanSankey()`. Nodes are `Source → Month → Bay`; link width scales with planned $ from the active scenario. Income categories become left-column sources; if none exist, a synthetic `Reserve` node holds the flow.
+- Hover a band → floating glass tooltip (`.sankey-tooltip`) with `from → to` and value. Click a band → opens the existing side panel (`openCategoryPanel(catId, monthKey)`) pre-filtered to that month. Click a month node → `openMonthPanel()` opens the first bay at that month.
+- Links reveal with a staggered stroke-dashoffset tween (~900ms, 8ms stagger); respects reduced-motion.
+- Gradient strokes per link (source color → target color) via `<linearGradient>` defs. Node labels sit outside the bars with a sub-line showing the $ amount.
+- D3 + d3-sankey pulled from jsDelivr; pure additive to existing CDN set.
+
+### Scenario / what-if mode
+- New Firebase path: `budget/scenarios/{id}` → `{ name, createdAt, plan, planItems }`. Base scenario remains at top-level `budget/plan` + `budget/planItems` (no migration).
+- Active scenario persisted at `budget/settings/activeScenario` (default `'base'`). All plan reads and writes now go through `planPath()` / `planItemsPath()` helpers.
+- Pill group in the top bar: `Base · [user scenarios] · +`. Active pill is highlighted; `+` prompts for a name and clones the current active plan into a new scenario. User scenarios get an `×` to delete (can't delete Base).
+- Listeners are rebound (`bindScenarioListeners()`) whenever the active scenario changes, so every view (Plan/Outlook/Compare/Dashboard/Nodes/Panel) reflects the switch with no extra plumbing.
+
+### Command palette (⌘K / Ctrl-K)
+- Glass modal with fuzzy scorer (prefix bonus, word-boundary bonus, subsequence fallback). `↑/↓` to navigate, `Enter` to invoke, `Esc` to close.
+- Action groups: Go to (7 views), Create (transaction / line item), Scenario (clone, switch to any), Export (.xlsx / quick), Toggle (reduced motion, accent).
+- Recent-actions memory: top-5 IDs persisted to `localStorage` under `fw.cmd.recent`; shown as a "Recent" group when the palette opens empty.
+- ⌘K hint badge wired into the top bar next to notifications.
+
+### Health gauge
+- Animated SVG ring gauge on the Dashboard header. Score 0–100 = weighted blend of `runwayMonths/12` (40%), `1 − overPlanCategories/totalCategories` (30%), and `committedOrDoneItems/upcomingItems` over the next 30 days (30%). Color gates: red <40, amber 40–70, accent ≥70. Stroke-dashoffset tweens in on first paint.
+- Re-renders whenever transactions, plan, or line items change (monkey-patched `renderTable` hook).
+
+### Polish layer
+- **Unified buttons** — single `.btn` + `.btn-primary` / `.btn-ghost` / `.btn-soft` / `.btn-icon` set; every ad-hoc button markup across Plan / Expenses / Nodes / Settings / Modal swept over to the new system.
+- **Toasts** — `toast(msg, kind)` helper (info / success / warn / error). Wired into: plan cell save, line-item add/update/delete, transaction save/delete, scenario switch/create/delete, settings save, accent change. Stack bottom-right, 2.8s auto-dismiss.
+- **Skeleton** — `.skel` class with a slow 1.4s shimmer (disabled under reduced motion). Ready to drop over any pre-Firebase surface.
+- **Empty states** — `.empty` pattern used in: Plan (no data / all-zero), Transactions (no log / no matches), Command palette (no fuzzy hits).
+- **Favicon + OG** — inline SVG favicon (lattice + dot on a rounded dark square). Open Graph + Twitter card meta tags; `og.png` (1200×630) committed alongside `index.html`.
+- **Boot animation** — 950ms overlay on first visit per session: lattice mark draws in (stroke-dashoffset), wordmark fades up, then fade out. Session-gated via `sessionStorage`, skipped under reduced motion.
+
+### Quieter / more minimal skin
+- Accent glow alpha `0.35 → 0.18`; `--accent-glow-soft` `0.05 → 0.03`. New `--surface-quiet` for tonal range.
+- Ambient WebGL: particle count `120 → 55`, opacity `0.75 → 0.40`, rotation/drift speeds halved. Shader mix-amount dialed down (`0.20 → 0.13`).
+- Three.js Nodes + Dashboard bay rotation speeds halved (imperceptibly slower, much calmer feel).
+- View headers: `text-5xl → text-6xl`, breathing paragraph beneath, kicker line in accent. Section paddings `p-12` / `gap-12`.
+- Glass panels: softer shadow (`glow-box` toned down), `1px` accent border instead of heavy drop shadow.
+- Top bar breadcrumb: accent-colored "FORMWORK" chip, smaller type, greater letter-spacing for structure.
+
+### Files
+- `index.html` — single file, everything above
+- `DEVLOG.md` — this entry
+- `og.png` — new static asset (1200×630)
+
 ## 2026-04-20 — Formwork rebrand, line items, Compare view, 3D lattice
 
 Full overhaul of the OpenYap Budget app. Name retired from `Lumino` → `Formwork` (construction-native: the mold concrete is poured into — the structure that shapes every dollar). Planning goes deeper, comparison goes wider, the whole thing sits on a live WebGL stage.
