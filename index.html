@@ -1434,14 +1434,23 @@ function seedPlanFromFormation() {
   });
 
   console.log('[FORMWORK seed] wrote', cellWrites.length, 'plan cells +', lineItems.length, 'line items to', planBase);
-  toast('Seeded ' + cellWrites.length + ' plan cells + ' + lineItems.length + ' line items. Switch to Plan.', 'success');
-  // Force a re-render if the user is already on Plan
+  toast('Seeded ' + cellWrites.length + ' plan cells + ' + lineItems.length + ' line items.', 'success');
+
+  // Apply the local mirror right away so the grid renders the new totals
+  // even before the Firebase listener fires back.
+  Object.entries(cellTotals).forEach(([catId, byMonth]) => {
+    if (!plan[catId]) plan[catId] = {};
+    Object.entries(byMonth).forEach(([monthKey, amount]) => {
+      plan[catId][monthKey] = Math.round(amount);
+    });
+  });
+
+  // Snap the horizon back, force grid mode (the Excel-style view), and jump there.
+  planHorizonOffset = 0;
+  setPlanView('grid');
   setTimeout(() => {
-    if (currentView === 'plan') {
-      planHorizonOffset = 0;   // snap back to month 1 so the seeded items are in view
-      renderPlan();
-    }
-  }, 1000);
+    switchView('plan');
+  }, 200);
 }
 
 function renderFormationTimeline() {
