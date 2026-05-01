@@ -1380,45 +1380,68 @@ function seedPlanFromFormation() {
   }
 
   // Remove stale entries
-  const planBase = planItemsPath();
-  stalePlanItems.forEach(([catId, itemId]) => fbRemove(planBase + '/' + catId + '/' + itemId));
+  const itemsBase = planItemsPath();
+  const planBase = planPath();
+  stalePlanItems.forEach(([catId, itemId]) => fbRemove(itemsBase + '/' + catId + '/' + itemId));
   staleTx.forEach(([id]) => fbRemove('budget/transactions/' + id));
 
-  // ── Write fresh seed ──
+  // ── Build the seed ──
+  // For each category × month, accumulate the total (used for plan cells —
+  // the simple fallback the Sankey reads) AND push individual line items
+  // (so drilling into a cell shows the breakdown).
   const noteFor = (extra) => 'Seeded from Formation roadmap · ' + SEED_TAG + ' · ' + extra;
+  const cellTotals = {};   // {catId: {monthKey: amount}}
+  const lineItems = [];    // {catId, payload}
   let order = 0;
-  let pending = 0;
 
-  ONE_TIME.forEach((it) => {
-    fbPush(planBase + '/' + it.cat, {
-      name: it.d,
-      amount: it.amt,
-      month: monthKeyAt(it.m),
-      status: 'planned',
-      notes: noteFor('one-time M' + (it.m + 1)),
-      order: order++,
-      ts: new Date().toISOString(),
-    });
-    pending++;
-  });
-  for (let m = 0; m < 12; m++) {
-    MONTHLY.forEach((it) => {
-      fbPush(planBase + '/' + it.cat, {
-        name: it.d,
-        amount: it.amt,
-        month: monthKeyAt(m),
+  function add(catId, monthKey, amount, name, tag) {
+    if (!cellTotals[catId]) cellTotals[catId] = {};
+    cellTotals[catId][monthKey] = (cellTotals[catId][monthKey] || 0) + amount;
+    lineItems.push({
+      catId,
+      payload: {
+        name, amount,
+        month: monthKey,
         status: 'planned',
-        notes: noteFor('recurring M' + (m + 1)),
+        notes: noteFor(tag),
         order: order++,
         ts: new Date().toISOString(),
-      });
-      pending++;
+      },
     });
   }
 
-  toast('Seeded ' + pending + ' Plan items. Switch to Plan to see the Sankey populate.', 'success');
-  // Force a re-render of the Plan view if the user switches there next
-  setTimeout(() => { if (currentView === 'plan') renderPlan(); }, 800);
+  ONE_TIME.forEach((it) => {
+    add(it.cat, monthKeyAt(it.m), it.amt, it.d, 'one-time M' + (it.m + 1));
+  });
+  for (let m = 0; m < 12; m++) {
+    MONTHLY.forEach((it) => {
+      add(it.cat, monthKeyAt(m), it.amt, it.d, 'recurring M' + (m + 1));
+    });
+  }
+
+  // ── Write plan cells (the per-cat / per-month totals the Sankey reads) ──
+  const cellWrites = [];
+  Object.entries(cellTotals).forEach(([catId, byMonth]) => {
+    Object.entries(byMonth).forEach(([monthKey, amount]) => {
+      const path = planBase + '/' + catId + '/' + monthKey;
+      cellWrites.push(fbSet(path, Math.round(amount)));
+    });
+  });
+
+  // ── Write line items (drill-down detail) ──
+  lineItems.forEach((it) => {
+    fbPush(itemsBase + '/' + it.catId, it.payload);
+  });
+
+  console.log('[FORMWORK seed] wrote', cellWrites.length, 'plan cells +', lineItems.length, 'line items to', planBase);
+  toast('Seeded ' + cellWrites.length + ' plan cells + ' + lineItems.length + ' line items. Switch to Plan.', 'success');
+  // Force a re-render if the user is already on Plan
+  setTimeout(() => {
+    if (currentView === 'plan') {
+      planHorizonOffset = 0;   // snap back to month 1 so the seeded items are in view
+      renderPlan();
+    }
+  }, 1000);
 }
 
 function renderFormationTimeline() {
