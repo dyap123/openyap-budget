@@ -473,6 +473,11 @@ html[data-motion="reduced"] .boot-overlay { display:none; }
           <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#f5b759]"></span> In Progress</div>
           <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-outline-variant/60"></span> To Do</div>
         </div>
+        <button onclick="seedPlanFromFormation()" class="mt-2 flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-[#8ff5ff] to-[#00deec] text-[#001218] font-bold text-sm hover:shadow-[0_0_24px_rgba(143,245,255,0.55)] transition-all">
+          <span class="material-symbols-outlined text-base">bolt</span>
+          Seed FORMWORK plan
+        </button>
+        <div class="text-[10px] text-on-surface-variant max-w-[220px] text-right leading-snug">Pushes these as planned transactions into Plan / Expenses / Outlook / Compare.</div>
       </div>
     </div>
 
@@ -1313,6 +1318,102 @@ function renderFormationBudget() {
   document.getElementById('formTotalYear1').textContent = '$' + grand.toLocaleString();
   document.getElementById('formTotalYear1').nextElementSibling.textContent =
     `Formation $${formationOnce.toLocaleString()} · Operations $${opsTotal.toLocaleString()}`;
+}
+
+// Seed FORMWORK Plan from the formation roadmap.
+// Writes ~80 planned transactions covering the next 12 months
+// (one-time formation costs + recurring monthly ops). Idempotent: if
+// previously-seeded transactions are detected they're cleared first so the
+// counts stay accurate when you tweak amounts and re-seed.
+function seedPlanFromFormation() {
+  const SEED_TAG = 'seeded-from-formation-v1';
+  // Anchor M1 to the first of NEXT month so the timeline reads "starting fresh".
+  const today = new Date();
+  const m1 = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const dateAt = (monthOffset, day) => {
+    const d = new Date(m1.getFullYear(), m1.getMonth() + monthOffset, Math.max(1, day || 1));
+    // Clamp day if month is shorter
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    if ((day || 1) > lastDay) d.setDate(lastDay);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const ONE_TIME = [
+    { d: 'CA SOS — Articles of Organization (LLC-1)',          amt:   70, cat:'llc',   day:  1, m: 0 },
+    { d: 'CA SOS — Name reservation',                          amt:   10, cat:'llc',   day:  1, m: 0 },
+    { d: 'CA SOS — Statement of Information (LLC-12)',         amt:   20, cat:'llc',   day: 14, m: 0 },
+    { d: 'LA City — BTRC business license',                    amt:  200, cat:'llc',   day:  1, m: 1 },
+    { d: 'Operating Agreement (attorney drafted)',             amt: 1200, cat:'legal', day: 14, m: 0 },
+    { d: 'IP Assignment + Founder Agreement',                  amt:  600, cat:'legal', day: 14, m: 0 },
+    { d: 'Trademark — OpenYap wordmark (TEAS Standard)',       amt:  350, cat:'legal', day: 30, m: 0 },
+    { d: 'Domains — openyap.ai/.com + DNS',                    amt:  150, cat:'infra', day:  1, m: 0 },
+    { d: 'Logo / brand mark refinement',                       amt:  200, cat:'mkt',   day:  7, m: 0 },
+    { d: 'Marketing site / collateral build',                  amt:  600, cat:'mkt',   day: 14, m: 0 },
+    { d: 'MacBook Pro M-series (founder)',                     amt: 2800, cat:'dev',   day:  1, m: 0 },
+  ];
+
+  const MONTHLY = [
+    { d: 'General Liability insurance',                        amt:   80, cat:'ops'   },
+    { d: 'E&O / Tech Liability insurance',                     amt:  120, cat:'ops'   },
+    { d: 'QuickBooks Online Plus',                             amt:   90, cat:'ops'   },
+    { d: 'CPA review retainer (avg)',                          amt:  100, cat:'ops'   },
+    { d: 'Cloudflare Pro + Workers + R2',                      amt:   25, cat:'infra' },
+    { d: 'Google Workspace Business Standard',                 amt:   14, cat:'ops'   },
+    { d: 'Linear / Notion / Slack',                            amt:   60, cat:'ops'   },
+    { d: 'Anthropic + OpenAI API',                             amt:  800, cat:'infra' },
+    { d: 'GPU/embeddings (Replicate / Modal)',                 amt:  200, cat:'infra' },
+    { d: 'Marketing site hosting',                             amt:   50, cat:'mkt'   },
+    { d: 'Legal retainer / contingency buffer',                amt:  250, cat:'ops'   },
+  ];
+
+  // Clear any previously-seeded transactions (idempotent re-seed)
+  const existing = transactions || {};
+  const stale = Object.entries(existing).filter(([, t]) => t && t.notes && t.notes.indexOf(SEED_TAG) >= 0);
+  if (stale.length) {
+    if (!confirm('Clear ' + stale.length + ' previously-seeded transactions and reseed with the latest formation budget?')) return;
+    stale.forEach(([id]) => fbRemove('budget/transactions/' + id));
+  } else {
+    if (!confirm('Push ~' + (ONE_TIME.length + MONTHLY.length * 12) + ' planned transactions to FORMWORK? Plan / Expenses / Outlook / Compare will populate immediately.')) return;
+  }
+
+  const noteFor = (extra) => 'Seeded from Formation roadmap · ' + SEED_TAG + (extra ? ' · ' + extra : '');
+  const queue = [];
+
+  ONE_TIME.forEach((it) => {
+    queue.push({
+      description: it.d,
+      amount: it.amt,
+      date: dateAt(it.m, it.day),
+      categoryId: it.cat,
+      status: 'planned',
+      notes: noteFor('one-time'),
+      ts: new Date().toISOString(),
+    });
+  });
+  for (let m = 0; m < 12; m++) {
+    MONTHLY.forEach((it) => {
+      queue.push({
+        description: it.d,
+        amount: it.amt,
+        date: dateAt(m, 1),
+        categoryId: it.cat,
+        status: 'planned',
+        notes: noteFor('M' + (m + 1)),
+        ts: new Date().toISOString(),
+      });
+    });
+  }
+
+  // Push in small chunks so Firebase doesn't choke
+  let i = 0;
+  const flush = () => {
+    const slice = queue.slice(i, i + 25);
+    slice.forEach((t) => fbPush('budget/transactions', t));
+    i += slice.length;
+    if (i < queue.length) setTimeout(flush, 60);
+    else toast('Seeded ' + queue.length + ' planned transactions — switch to Plan to see them.', 'success');
+  };
+  flush();
 }
 
 function renderFormationTimeline() {
