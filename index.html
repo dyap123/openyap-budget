@@ -1320,137 +1320,75 @@ function renderFormationBudget() {
     `Formation $${formationOnce.toLocaleString()} · Operations $${opsTotal.toLocaleString()}`;
 }
 
-// Seed FORMWORK PLAN from the formation roadmap.
-// Writes plan-line-items (the data Plan / Outlook / Compare actually read)
-// for the next 12 months. Idempotent — re-seeding clears the previous
-// seeded set. Manually-added line items are NEVER touched.
+// Seed FORMWORK Plan from the formation roadmap.
+// Writes per-category × per-month totals straight into the `plan` object
+// (the data the grid + Sankey both read via planCell). Mirrors locally
+// before switching views so the grid renders instantly — no waiting on a
+// Firebase round-trip.
 function seedPlanFromFormation() {
-  const SEED_TAG = 'seeded-from-formation-v1';
+  if (!confirm('Seed the Plan grid with the year-1 formation budget? Existing manually-edited cells in the same months will be overwritten.')) return;
 
-  const ONE_TIME = [
-    { d: 'CA SOS — Articles of Organization (LLC-1)',     amt:   70, cat:'llc',   m: 0 },
-    { d: 'CA SOS — Name reservation',                     amt:   10, cat:'llc',   m: 0 },
-    { d: 'CA SOS — Statement of Information (LLC-12)',    amt:   20, cat:'llc',   m: 2 },
-    { d: 'LA City — BTRC business license',               amt:  200, cat:'llc',   m: 1 },
-    { d: 'Operating Agreement (attorney drafted)',        amt: 1200, cat:'legal', m: 0 },
-    { d: 'IP Assignment + Founder Agreement',             amt:  600, cat:'legal', m: 0 },
-    { d: 'Trademark — OpenYap wordmark (TEAS Standard)',  amt:  350, cat:'legal', m: 1 },
-    { d: 'Domains — openyap.ai/.com + DNS',               amt:  150, cat:'infra', m: 0 },
-    { d: 'Logo / brand mark refinement',                  amt:  200, cat:'mkt',   m: 0 },
-    { d: 'Marketing site / collateral build',             amt:  600, cat:'mkt',   m: 1 },
-    { d: 'MacBook Pro M-series (founder)',                amt: 2800, cat:'dev',   m: 0 },
-  ];
+  // ── Compute per-cat × per-month totals ─────────────────────────────────
+  // ONE-TIME line items (allocated to specific months):
+  //   M1: Articles 70, Name 10                                       → llc 80
+  //   M2: LA BTRC 200                                                → llc 200
+  //   M3: Statement of Information 20                                → llc 20
+  //   M1: Operating Agreement 1200 + IP 600                          → legal 1800
+  //   M2: Trademark 350                                              → legal 350
+  //   M1: Domains 150                                                → infra +150
+  //   M1: Logo 200                                                   → mkt +200
+  //   M2: Marketing site build 600                                   → mkt +600
+  //   M1: MacBook Pro 2800                                           → dev 2800
+  // RECURRING (every month):
+  //   ops:   GL 80 + EO 120 + QBO 90 + CPA 100 + Workspace 14
+  //          + Linear/Notion/Slack 60 + Buffer 250 = 714
+  //   infra: Cloudflare 25 + AI APIs 800 + GPU 200 = 1025
+  //   mkt:   Marketing site hosting 50 = 50
+  const cells = { llc:{}, legal:{}, infra:{}, dev:{}, mkt:{}, ops:{} };
+  const mk = i => monthKeyAt(i);
 
-  const MONTHLY = [
-    { d: 'General Liability insurance',          amt:   80, cat:'ops'   },
-    { d: 'E&O / Tech Liability insurance',       amt:  120, cat:'ops'   },
-    { d: 'QuickBooks Online Plus',               amt:   90, cat:'ops'   },
-    { d: 'CPA review retainer (avg)',            amt:  100, cat:'ops'   },
-    { d: 'Cloudflare Pro + Workers + R2',        amt:   25, cat:'infra' },
-    { d: 'Google Workspace Business Standard',   amt:   14, cat:'ops'   },
-    { d: 'Linear / Notion / Slack',              amt:   60, cat:'ops'   },
-    { d: 'Anthropic + OpenAI API',               amt:  800, cat:'infra' },
-    { d: 'GPU/embeddings (Replicate / Modal)',   amt:  200, cat:'infra' },
-    { d: 'Marketing site hosting',               amt:   50, cat:'mkt'   },
-    { d: 'Legal retainer / contingency buffer',  amt:  250, cat:'ops'   },
-  ];
+  // One-time
+  cells.llc[mk(0)]   = 80;
+  cells.llc[mk(1)]   = 200;
+  cells.llc[mk(2)]   = 20;
+  cells.legal[mk(0)] = 1800;
+  cells.legal[mk(1)] = 350;
+  cells.dev[mk(0)]   = 2800;
 
-  // ── Cleanup: remove anything we previously seeded (in either store) ──
-  const stalePlanItems = [];
-  Object.entries(planItems || {}).forEach(([catId, byId]) => {
-    Object.entries(byId || {}).forEach(([itemId, it]) => {
-      if (it && it.notes && String(it.notes).indexOf(SEED_TAG) >= 0) {
-        stalePlanItems.push([catId, itemId]);
-      }
-    });
-  });
-  const staleTx = Object.entries(transactions || {}).filter(
-    ([, t]) => t && t.notes && String(t.notes).indexOf(SEED_TAG) >= 0
-  );
-
-  const total = ONE_TIME.length + MONTHLY.length * 12;
-  if (stalePlanItems.length || staleTx.length) {
-    if (!confirm(
-      'Re-seed plan? This will clear ' + stalePlanItems.length + ' previously-seeded plan items'
-      + (staleTx.length ? ' and ' + staleTx.length + ' transaction stubs from the older seed' : '')
-      + ', then write ' + total + ' fresh items into the Plan view (one per category × month).'
-    )) return;
-  } else {
-    if (!confirm('Write ' + total + ' line items into FORMWORK Plan for the next 12 months?')) return;
+  // Recurring monthlies (M0..M11)
+  for (let i = 0; i < 12; i++) {
+    const k = mk(i);
+    cells.ops[k]   = (cells.ops[k]   || 0) + 714;
+    cells.infra[k] = (cells.infra[k] || 0) + 1025;
+    cells.mkt[k]   = (cells.mkt[k]   || 0) + 50;
   }
+  // Inject one-time into recurring months
+  cells.infra[mk(0)] += 150;   // domains
+  cells.mkt[mk(0)]   += 200;   // logo
+  cells.mkt[mk(1)]   += 600;   // marketing site build
 
-  // Remove stale entries
-  const itemsBase = planItemsPath();
-  const planBase = planPath();
-  stalePlanItems.forEach(([catId, itemId]) => fbRemove(itemsBase + '/' + catId + '/' + itemId));
-  staleTx.forEach(([id]) => fbRemove('budget/transactions/' + id));
-
-  // ── Build the seed ──
-  // For each category × month, accumulate the total (used for plan cells —
-  // the simple fallback the Sankey reads) AND push individual line items
-  // (so drilling into a cell shows the breakdown).
-  const noteFor = (extra) => 'Seeded from Formation roadmap · ' + SEED_TAG + ' · ' + extra;
-  const cellTotals = {};   // {catId: {monthKey: amount}}
-  const lineItems = [];    // {catId, payload}
-  let order = 0;
-
-  function add(catId, monthKey, amount, name, tag) {
-    if (!cellTotals[catId]) cellTotals[catId] = {};
-    cellTotals[catId][monthKey] = (cellTotals[catId][monthKey] || 0) + amount;
-    lineItems.push({
-      catId,
-      payload: {
-        name, amount,
-        month: monthKey,
-        status: 'planned',
-        notes: noteFor(tag),
-        order: order++,
-        ts: new Date().toISOString(),
-      },
-    });
-  }
-
-  ONE_TIME.forEach((it) => {
-    add(it.cat, monthKeyAt(it.m), it.amt, it.d, 'one-time M' + (it.m + 1));
-  });
-  for (let m = 0; m < 12; m++) {
-    MONTHLY.forEach((it) => {
-      add(it.cat, monthKeyAt(m), it.amt, it.d, 'recurring M' + (m + 1));
-    });
-  }
-
-  // ── Write plan cells (the per-cat / per-month totals the Sankey reads) ──
-  const cellWrites = [];
-  Object.entries(cellTotals).forEach(([catId, byMonth]) => {
-    Object.entries(byMonth).forEach(([monthKey, amount]) => {
-      const path = planBase + '/' + catId + '/' + monthKey;
-      cellWrites.push(fbSet(path, Math.round(amount)));
-    });
-  });
-
-  // ── Write line items (drill-down detail) ──
-  lineItems.forEach((it) => {
-    fbPush(itemsBase + '/' + it.catId, it.payload);
-  });
-
-  console.log('[FORMWORK seed] wrote', cellWrites.length, 'plan cells +', lineItems.length, 'line items to', planBase);
-  toast('Seeded ' + cellWrites.length + ' plan cells + ' + lineItems.length + ' line items.', 'success');
-
-  // Apply the local mirror right away so the grid renders the new totals
-  // even before the Firebase listener fires back.
-  Object.entries(cellTotals).forEach(([catId, byMonth]) => {
+  // ── Apply locally + write to Firebase ──────────────────────────────────
+  const writes = [];
+  Object.entries(cells).forEach(([catId, byMonth]) => {
     if (!plan[catId]) plan[catId] = {};
     Object.entries(byMonth).forEach(([monthKey, amount]) => {
-      plan[catId][monthKey] = Math.round(amount);
+      const v = Math.round(amount);
+      plan[catId][monthKey] = v;
+      writes.push(fbSet(planPath() + '/' + catId + '/' + monthKey, v));
     });
   });
 
-  // Snap the horizon back, force grid mode (the Excel-style view), and jump there.
+  console.log('[FORMWORK seed] wrote', writes.length, 'plan cells. Local plan now:', JSON.parse(JSON.stringify(plan)));
+  toast('Seeded ' + writes.length + ' plan cells.', 'success');
+
+  // Force grid mode + switch to Plan view + render
   planHorizonOffset = 0;
-  setPlanView('grid');
-  setTimeout(() => {
-    switchView('plan');
-  }, 200);
+  planView = 'grid';
+  try { localStorage.setItem('fw.planView', 'grid'); } catch (e) {}
+  switchView('plan');
+  // Render again on next tick after Firebase listener may fire
+  setTimeout(renderPlan, 50);
+  setTimeout(renderPlan, 600);
 }
 
 function renderFormationTimeline() {
