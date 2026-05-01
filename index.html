@@ -299,10 +299,6 @@ html[data-motion="reduced"] .boot-overlay { display:none; }
       <span class="material-symbols-outlined text-[20px]">dashboard</span>
       <span class="font-headline tracking-tight">Dashboard</span>
     </a></li>
-    <li><a class="nav-item" onclick="switchView('formation')" data-view="formation">
-      <span class="material-symbols-outlined text-[20px]">verified</span>
-      <span class="font-headline tracking-tight">Form LLC</span>
-    </a></li>
     <li><a class="nav-item" onclick="switchView('plan')" data-view="plan">
       <span class="material-symbols-outlined text-[20px]">calendar_month</span>
       <span class="font-headline tracking-tight">Plan</span>
@@ -448,93 +444,6 @@ html[data-motion="reduced"] .boot-overlay { display:none; }
         </table>
       </div>
     </div>
-  </div>
-
-  <!-- ═══════════════ FORM LLC VIEW ═══════════════ -->
-  <div class="view flex-col p-12 gap-10 max-w-[1600px] mx-auto w-full" id="v-formation">
-    <!-- Header -->
-    <div class="flex items-end justify-between gap-8 flex-wrap">
-      <div>
-        <p class="font-label uppercase tracking-[0.22em] text-[11px] mb-4 font-semibold flex items-center gap-2" style="color:var(--accent)">
-          <span class="material-symbols-outlined text-[14px]">verified</span>
-          California LLC · Pre-Formation
-        </p>
-        <h2 class="font-headline text-6xl font-extrabold tracking-tighter text-on-surface leading-none">Form <span style="color:var(--accent)" class="glow-text">OpenYap AI LLC</span></h2>
-        <p class="text-on-surface-variant text-base mt-3 max-w-2xl leading-relaxed">A 12-step CA-specific formation roadmap with hypothetical year-1 budget. Click any step for details. State + county fees are firm; legal fees are mid-market estimates — go up or down depending on whether you DIY or use Stripe Atlas / LegalZoom / a local attorney.</p>
-      </div>
-      <div class="shrink-0 flex flex-col items-end gap-3">
-        <div class="text-right">
-          <div class="text-[11px] uppercase tracking-[0.18em] text-on-surface-variant font-bold">Total Year-1 Cost</div>
-          <div class="font-mono text-5xl font-bold leading-none" style="color:var(--accent)" id="formTotalYear1">$26,200</div>
-          <div class="text-[11px] text-on-surface-variant mt-1">Formation $2,966 · Operations $23,234</div>
-        </div>
-        <div class="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-on-surface-variant font-semibold">
-          <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#8ff5ff]"></span> Filed</div>
-          <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#f5b759]"></span> In Progress</div>
-          <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-outline-variant/60"></span> To Do</div>
-        </div>
-        <button onclick="seedPlanFromFormation()" class="mt-2 flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-[#8ff5ff] to-[#00deec] text-[#001218] font-bold text-sm hover:shadow-[0_0_24px_rgba(143,245,255,0.55)] transition-all">
-          <span class="material-symbols-outlined text-base">bolt</span>
-          Seed FORMWORK plan
-        </button>
-        <div class="text-[10px] text-on-surface-variant max-w-[220px] text-right leading-snug">Pushes these as planned transactions into Plan / Expenses / Outlook / Compare.</div>
-      </div>
-    </div>
-
-    <!-- Progress strip -->
-    <section class="bg-surface-container-low/60 rounded-xl p-6 glow-box">
-      <div class="flex items-center justify-between mb-3">
-        <div class="font-headline text-sm font-bold tracking-tight uppercase text-on-surface-variant">Roadmap Progress</div>
-        <div class="font-mono text-xs text-on-surface-variant"><span id="formStepsDone">0</span> of <span id="formStepsTotal">12</span> steps complete</div>
-      </div>
-      <div class="h-2 rounded-full bg-[#0f192c] overflow-hidden">
-        <div id="formProgressBar" class="h-full rounded-full bg-gradient-to-r from-[#8ff5ff] to-[#00deec] transition-all duration-500" style="width:0%"></div>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 text-center">
-        <div class="rounded-lg p-3 bg-surface-container-low/60 border border-outline-variant/15">
-          <div class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">State Fees</div>
-          <div class="font-mono text-xl font-bold mt-1.5 text-on-surface" id="formStateFees">$166</div>
-        </div>
-        <div class="rounded-lg p-3 bg-surface-container-low/60 border border-outline-variant/15">
-          <div class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Legal</div>
-          <div class="font-mono text-xl font-bold mt-1.5 text-on-surface" id="formLegalFees">$1,800</div>
-        </div>
-        <div class="rounded-lg p-3 bg-surface-container-low/60 border border-outline-variant/15">
-          <div class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Brand / IP</div>
-          <div class="font-mono text-xl font-bold mt-1.5 text-on-surface" id="formBrandFees">$700</div>
-        </div>
-        <div class="rounded-lg p-3 bg-surface-container-low/60 border border-outline-variant/15">
-          <div class="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Local / Setup</div>
-          <div class="font-mono text-xl font-bold mt-1.5 text-on-surface" id="formLocalFees">$300</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Roadmap checklist -->
-    <section class="bg-surface-container-low/60 rounded-xl p-8 glow-box">
-      <h3 class="font-headline text-2xl font-extrabold tracking-tight text-on-surface mb-1">Formation Roadmap</h3>
-      <p class="text-on-surface-variant text-sm mb-6">Tap a step to mark it complete. Status is local to your browser.</p>
-      <div id="formStepsList" class="flex flex-col gap-2.5"></div>
-    </section>
-
-    <!-- Year 1 hypothetical budget -->
-    <section class="bg-surface-container-low/60 rounded-xl p-8 glow-box">
-      <div class="flex items-end justify-between mb-6 gap-6 flex-wrap">
-        <div>
-          <h3 class="font-headline text-2xl font-extrabold tracking-tight text-on-surface">Year-1 Hypothetical Budget</h3>
-          <p class="text-on-surface-variant text-sm mt-1">Bootstrap-mode totals. Operations assume founder is unsalaried and AI compute scales with paid pilots.</p>
-        </div>
-        <div class="font-mono text-on-surface-variant text-xs">Last update <span class="text-on-surface">today</span></div>
-      </div>
-      <div id="formBudgetTable" class="overflow-x-auto"></div>
-    </section>
-
-    <!-- Cumulative timeline -->
-    <section class="bg-surface-container-low/60 rounded-xl p-8 glow-box">
-      <h3 class="font-headline text-2xl font-extrabold tracking-tight text-on-surface mb-1">Cumulative Cost Timeline</h3>
-      <p class="text-on-surface-variant text-sm mb-6">When dollars hit the books across the first 12 months.</p>
-      <div id="formTimelineChart" class="w-full"></div>
-    </section>
   </div>
 
   <!-- ═══════════════ PLAN VIEW ═══════════════ -->
@@ -960,7 +869,7 @@ let plan = {};        // ACTIVE scenario's legacy plan: { catId: { 'YYYY-MM': am
 let planItems = {};   // ACTIVE scenario's line items: { catId: { itemId: {...} } }
 let scenarios = {};   // { id: { name, createdAt } } — 'base' is implicit/virtual
 let activeScenarioId = 'base'; // 'base' means top-level budget/plan + budget/planItems
-let settings = { currency:'USD', fiscalYearStart:'2026-01', companyName:'OpenYap AI LLC', seedTarget:1200000, accent:'cyan', reducedMotion:false, activeScenario:'base' };
+let settings = { currency:'USD', fiscalYearStart:'2026-06', companyName:'OpenYap AI LLC', seedTarget:1200000, accent:'cyan', reducedMotion:false, activeScenario:'base' };
 let currentView = 'dashboard';
 let planHorizonOffset = 0;
 const PLAN_MONTHS = 12;
@@ -992,6 +901,15 @@ function bindScenarioListeners() {
   _planItemsRef = db.ref(planItemsPath());
   _planRef.on('value', snap => {
     plan = snap.val() || {};
+    // Auto-seed an empty plan with the year-1 scaling budget. Runs once.
+    if (Object.keys(plan).length === 0) {
+      plan = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+      Object.entries(plan).forEach(([catId, byMonth]) => {
+        Object.entries(byMonth).forEach(([mk, v]) => {
+          fbSet(planPath() + '/' + catId + '/' + mk, v);
+        });
+      });
+    }
     if (currentView === 'plan') renderPlan();
     if (currentView === 'outlook') renderOutlook();
     if (currentView === 'compare') renderCompare();
@@ -1055,6 +973,30 @@ function promptNewScenario() {
   if (name && name.trim()) createScenario(name.trim(), true);
 }
 
+// Year-1 scaling plan: June 2026 → May 2027.
+// Phase 1 (Jun-Aug): formation + lean foundation.
+// Phase 2 (Sep-Nov): first contractor, marketing ramp.
+// Phase 3 (Dec-Feb): pilot rollouts, sales push.
+// Phase 4 (Mar-May): scale headcount + compute.
+const DEFAULT_PLAN = {
+  llc:   { '2026-06': 80,   '2026-07': 200,  '2026-08': 20 },
+  legal: { '2026-06': 1800, '2026-07': 350,  '2026-08': 300,  '2026-09': 400,
+           '2026-10': 400,  '2026-11': 500,  '2026-12': 500,  '2027-01': 500,
+           '2027-02': 600,  '2027-03': 700,  '2027-04': 800,  '2027-05': 800 },
+  infra: { '2026-06': 1175, '2026-07': 1100, '2026-08': 1300, '2026-09': 2000,
+           '2026-10': 2500, '2026-11': 3000, '2026-12': 3500, '2027-01': 4000,
+           '2027-02': 4500, '2027-03': 5000, '2027-04': 5500, '2027-05': 6000 },
+  dev:   { '2026-06': 2800, '2026-07': 0,    '2026-08': 0,    '2026-09': 8000,
+           '2026-10': 8000, '2026-11': 8000, '2026-12': 10000,'2027-01': 10000,
+           '2027-02': 10000,'2027-03': 12000,'2027-04': 12000,'2027-05': 12000 },
+  mkt:   { '2026-06': 250,  '2026-07': 100,  '2026-08': 100,  '2026-09': 1000,
+           '2026-10': 1500, '2026-11': 2000, '2026-12': 2500, '2027-01': 3000,
+           '2027-02': 3500, '2027-03': 4000, '2027-04': 4500, '2027-05': 5000 },
+  ops:   { '2026-06': 714,  '2026-07': 750,  '2026-08': 800,  '2026-09': 900,
+           '2026-10': 1000, '2026-11': 1100, '2026-12': 1200, '2027-01': 1300,
+           '2027-02': 1400, '2027-03': 1500, '2027-04': 1600, '2027-05': 1700 },
+};
+
 const DEFAULT_CATS = {
   llc:    { name:'LLC Formation',   type:'expense', icon:'gavel',       color:'#8ff5ff', order:0 },
   legal:  { name:'Legal',           type:'expense', icon:'policy',      color:'#ff716c', order:1 },
@@ -1069,7 +1011,7 @@ const DEFAULT_CATS = {
 // ════════════════════════════════════════
 //  VIEW SWITCHING
 // ════════════════════════════════════════
-const _VIEWS = ['dashboard','formation','plan','expenses','outlook','compare','nodes','settings'];
+const _VIEWS = ['dashboard','plan','expenses','outlook','compare','nodes','settings'];
 function switchView(v) {
   if (!_VIEWS.includes(v)) v = 'dashboard';
   currentView = v;
@@ -1087,414 +1029,8 @@ function switchView(v) {
   if (v === 'plan') renderPlan();
   if (v === 'outlook') renderOutlook();
   if (v === 'compare') renderCompare();
-  if (v === 'formation') renderFormation();
-  if (v === 'formation') document.getElementById('breadcrumb').textContent = 'Form LLC';
 }
 
-// ════════════════════════════════════════
-//  LLC FORMATION VIEW
-// ════════════════════════════════════════
-const FORMATION_STEPS = [
-  {
-    id: 'name', title: 'Reserve / clear LLC name',
-    desc: 'Search at bizfileOnline.sos.ca.gov for "OpenYap AI" availability. Reserve for 60 days if you want to lock it in before filing.',
-    cost: 10, group: 'state', deadline: 'Day 0',
-    link: 'https://bizfileonline.sos.ca.gov/search/business',
-  },
-  {
-    id: 'articles', title: 'File Articles of Organization (LLC-1)',
-    desc: 'Online filing through California Secretary of State. Approval typically returns in 5–8 business days.',
-    cost: 70, group: 'state', deadline: 'Day 1',
-    link: 'https://bizfileonline.sos.ca.gov/forms/llc',
-  },
-  {
-    id: 'ein', title: 'Get EIN from IRS',
-    desc: 'Free online via irs.gov — issued same-day. Required before opening a bank account.',
-    cost: 0, group: 'state', deadline: 'Day 7',
-    link: 'https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online',
-  },
-  {
-    id: 'soi', title: 'File Statement of Information (LLC-12)',
-    desc: 'Required within 90 days of formation, then biennially. List members, manager, registered agent.',
-    cost: 20, group: 'state', deadline: 'Day 90',
-    link: 'https://bizfileonline.sos.ca.gov/forms/llc',
-  },
-  {
-    id: 'agreement', title: 'Operating Agreement',
-    desc: 'Single-member or multi-member template, ideally reviewed by a CA attorney. Defines ownership %, vesting, IP assignment, dissolution clauses.',
-    cost: 1200, group: 'legal', deadline: 'Day 14',
-    link: '',
-  },
-  {
-    id: 'ipassign', title: 'IP Assignment + Founder Agreement',
-    desc: 'Founder signs all pre-formation IP (code, designs, the OpenYap brand) over to the LLC. Critical if Webcor or anyone else has a claim.',
-    cost: 600, group: 'legal', deadline: 'Day 14',
-    link: '',
-  },
-  {
-    id: 'trademark', title: 'Trademark — "OpenYap" wordmark (USPTO)',
-    desc: 'TEAS Standard, single class (likely Class 42 — software/SaaS). Protects the name nationally; takes 8–12 months to register.',
-    cost: 350, group: 'brand', deadline: 'Day 30',
-    link: 'https://www.uspto.gov/trademarks/apply',
-  },
-  {
-    id: 'domain', title: 'Domains + brand assets',
-    desc: 'openyap.ai (.com if available), openyap.com if you can grab it, plus a private DNS provider.',
-    cost: 150, group: 'brand', deadline: 'Day 0',
-    link: 'https://domains.cloudflare.com',
-  },
-  {
-    id: 'bank', title: 'Open business bank account',
-    desc: 'Mercury (no minimums, fast) or Chase Business. Bring Articles of Organization + EIN letter.',
-    cost: 0, group: 'local', deadline: 'Day 14',
-    link: 'https://mercury.com',
-  },
-  {
-    id: 'license', title: 'LA city business license / BTRC',
-    desc: 'Los Angeles Business Tax Registration Certificate. Required if operating from / billing in LA.',
-    cost: 200, group: 'local', deadline: 'Day 30',
-    link: 'https://finance.lacity.gov/business-tax-information',
-  },
-  {
-    id: 'insurance', title: 'General Liability + E&O insurance',
-    desc: 'Hiscox / Next / Thimble for software-focused E&O. Most enterprise contracts require $1M GL + $1M E&O.',
-    cost: 2400, group: 'ops', deadline: 'Day 45',
-    link: 'https://www.hiscox.com/small-business-insurance',
-  },
-  {
-    id: 'accounting', title: 'Accounting + bookkeeping setup',
-    desc: 'QuickBooks Online or Xero, plus a CPA for quarterly review and end-of-year filing. Critical for the $800 CA franchise tax (waived first year for LLCs).',
-    cost: 1200, group: 'ops', deadline: 'Day 60',
-    link: 'https://quickbooks.intuit.com',
-  },
-];
-
-const FORMATION_BUDGET = [
-  // Formation costs
-  { cat: 'Formation', item: 'Articles of Organization (LLC-1)', once: 70, monthly: 0, note: 'CA SOS · one-time' },
-  { cat: 'Formation', item: 'Statement of Information (LLC-12)', once: 20, monthly: 0, note: 'Biennial after first filing' },
-  { cat: 'Formation', item: 'Name reservation (optional)', once: 10, monthly: 0, note: '60-day hold' },
-  { cat: 'Formation', item: 'EIN from IRS', once: 0, monthly: 0, note: 'Free' },
-  { cat: 'Formation', item: 'CA Annual Franchise Tax', once: 0, monthly: 0, note: 'Waived year 1 for new LLCs (AB 85)' },
-  { cat: 'Formation', item: 'LA city BTRC', once: 200, monthly: 0, note: '' },
-  { cat: 'Legal', item: 'Operating Agreement (attorney drafted)', once: 1200, monthly: 0, note: '' },
-  { cat: 'Legal', item: 'IP Assignment + Founder Agreement', once: 600, monthly: 0, note: '' },
-  { cat: 'Brand / IP', item: 'Trademark filing (TEAS Standard, 1 class)', once: 350, monthly: 0, note: '' },
-  { cat: 'Brand / IP', item: 'Domains + DNS (openyap.ai/.com)', once: 150, monthly: 0, note: '+$15/mo Cloudflare optional' },
-  { cat: 'Brand / IP', item: 'Logo / brand mark refinement', once: 200, monthly: 0, note: 'Or $0 if you do it yourself' },
-  // Operations (year 1, monthly)
-  { cat: 'Insurance', item: 'General Liability ($1M)', once: 0, monthly: 80, note: '$960/yr' },
-  { cat: 'Insurance', item: 'E&O / Tech Liability ($1M)', once: 0, monthly: 120, note: '$1,440/yr' },
-  { cat: 'Accounting', item: 'QuickBooks Online Plus', once: 0, monthly: 90, note: '' },
-  { cat: 'Accounting', item: 'CPA quarterly review', once: 0, monthly: 100, note: '~$300/quarter' },
-  { cat: 'Software', item: 'Cloudflare Pro + Workers + R2', once: 0, monthly: 25, note: '' },
-  { cat: 'Software', item: 'Google Workspace Business Std (1 seat)', once: 0, monthly: 14, note: '' },
-  { cat: 'Software', item: 'Linear / Notion / Slack (lean stack)', once: 0, monthly: 60, note: '' },
-  { cat: 'Software', item: 'Github + Vercel + Stripe (free tiers)', once: 0, monthly: 0, note: 'Pay-as-you-grow' },
-  { cat: 'AI Compute', item: 'Anthropic + OpenAI API', once: 0, monthly: 800, note: 'Scales with pilots' },
-  { cat: 'AI Compute', item: 'GPU/embeddings (Replicate / Modal)', once: 0, monthly: 200, note: '' },
-  { cat: 'Marketing', item: 'Marketing site / collateral', once: 600, monthly: 50, note: 'Domain + hosting' },
-  { cat: 'Hardware', item: 'M-series MacBook Pro (founder)', once: 2800, monthly: 0, note: '' },
-  { cat: 'Buffer', item: 'Legal retainer / contingencies', once: 0, monthly: 250, note: '$3k/yr' },
-];
-
-function renderFormation() {
-  // Restore step status from localStorage
-  const stored = JSON.parse(localStorage.getItem('formation.steps') || '{}');
-  const list = document.getElementById('formStepsList');
-  list.innerHTML = '';
-  let done = 0;
-  FORMATION_STEPS.forEach((s, i) => {
-    const status = stored[s.id] || 'todo';
-    if (status === 'done') done++;
-    const groupColors = {
-      state:  { bg: 'rgba(143,245,255,0.10)', text: '#8ff5ff', label: 'State' },
-      legal:  { bg: 'rgba(133,150,255,0.10)', text: '#8596ff', label: 'Legal' },
-      brand:  { bg: 'rgba(191,129,255,0.10)', text: '#bf81ff', label: 'Brand / IP' },
-      local:  { bg: 'rgba(245,183,89,0.10)',  text: '#f5b759', label: 'Local' },
-      ops:    { bg: 'rgba(0,222,236,0.10)',   text: '#00deec', label: 'Ops' },
-    };
-    const gc = groupColors[s.group];
-    const statusColors = {
-      todo:    { dot: '#40485a', text: 'TO DO' },
-      progress:{ dot: '#f5b759', text: 'IN PROGRESS' },
-      done:    { dot: '#8ff5ff', text: 'COMPLETE' },
-    };
-    const sc = statusColors[status];
-    const card = document.createElement('div');
-    card.className = 'group flex items-start gap-4 p-4 rounded-lg bg-surface-container-low/40 hover:bg-surface-container-low/80 border border-outline-variant/15 hover:border-' + (status === 'done' ? 'primary/40' : 'outline-variant/30') + ' transition-all cursor-pointer';
-    card.innerHTML = `
-      <button class="formation-step-toggle shrink-0 mt-1 w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center" data-step="${s.id}"
-              style="border-color:${sc.dot}; background:${status==='done'?sc.dot:'transparent'}">
-        ${status==='done' ? '<span class="material-symbols-outlined text-[12px]" style="color:#001218">check</span>' : ''}
-      </button>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-3 flex-wrap">
-          <span class="font-mono text-[10px] tracking-wide text-on-surface-variant">${String(i+1).padStart(2,'0')}</span>
-          <h4 class="font-headline text-base font-bold text-on-surface">${s.title}</h4>
-          <span class="text-[9px] uppercase tracking-[0.14em] font-bold px-2 py-0.5 rounded-full" style="background:${gc.bg}; color:${gc.text}">${gc.label}</span>
-          <span class="text-[9px] uppercase tracking-[0.12em] font-bold text-on-surface-variant">${sc.text}</span>
-        </div>
-        <p class="font-body text-sm text-on-surface-variant leading-relaxed mt-1.5">${s.desc}</p>
-        <div class="flex items-center gap-4 mt-2 text-[11px] text-on-surface-variant">
-          <span class="font-mono"><span class="text-on-surface font-semibold">$${s.cost.toLocaleString()}</span> filing fee</span>
-          <span class="font-mono">deadline · ${s.deadline}</span>
-          ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" class="text-[#8ff5ff] hover:underline" onclick="event.stopPropagation()">open ↗</a>` : ''}
-        </div>
-      </div>
-    `;
-    card.addEventListener('click', () => {
-      const cur = JSON.parse(localStorage.getItem('formation.steps') || '{}');
-      const next = { todo: 'progress', progress: 'done', done: 'todo' }[cur[s.id] || 'todo'];
-      cur[s.id] = next;
-      localStorage.setItem('formation.steps', JSON.stringify(cur));
-      renderFormation();
-    });
-    list.appendChild(card);
-  });
-  // Progress strip
-  document.getElementById('formStepsDone').textContent = done;
-  document.getElementById('formStepsTotal').textContent = FORMATION_STEPS.length;
-  const pct = FORMATION_STEPS.length ? Math.round(done / FORMATION_STEPS.length * 100) : 0;
-  document.getElementById('formProgressBar').style.width = pct + '%';
-  // Group totals
-  const groupTotals = {};
-  FORMATION_STEPS.forEach(s => { groupTotals[s.group] = (groupTotals[s.group] || 0) + s.cost; });
-  document.getElementById('formStateFees').textContent = '$' + (groupTotals.state || 0).toLocaleString();
-  document.getElementById('formLegalFees').textContent = '$' + (groupTotals.legal || 0).toLocaleString();
-  document.getElementById('formBrandFees').textContent = '$' + (groupTotals.brand || 0).toLocaleString();
-  document.getElementById('formLocalFees').textContent = '$' + ((groupTotals.local || 0) + (groupTotals.ops || 0)).toLocaleString();
-
-  // Budget table
-  renderFormationBudget();
-  // Timeline
-  renderFormationTimeline();
-}
-
-function renderFormationBudget() {
-  const groups = {};
-  FORMATION_BUDGET.forEach(b => { (groups[b.cat] = groups[b.cat] || []).push(b); });
-  let html = '<table class="w-full text-sm"><thead><tr class="text-[10px] uppercase tracking-[0.14em] text-on-surface-variant font-bold">';
-  html += '<th class="text-left py-3 px-3">Item</th>';
-  html += '<th class="text-right py-3 px-3">One-time</th>';
-  html += '<th class="text-right py-3 px-3">Monthly</th>';
-  html += '<th class="text-right py-3 px-3">Year-1 Total</th>';
-  html += '<th class="text-left py-3 px-3 hidden md:table-cell">Note</th>';
-  html += '</tr></thead><tbody>';
-  let formationOnce = 0, opsTotal = 0;
-  Object.entries(groups).forEach(([cat, items]) => {
-    let groupOnce = 0, groupAnnual = 0;
-    items.forEach(it => {
-      const annual = (it.once || 0) + (it.monthly || 0) * 12;
-      groupOnce += (it.once || 0);
-      groupAnnual += annual;
-      if (cat === 'Formation' || cat === 'Legal' || cat === 'Brand / IP') formationOnce += (it.once || 0);
-      else opsTotal += annual;
-    });
-    html += `<tr class="border-t border-outline-variant/10"><td colspan="5" class="py-3 px-3"><span class="text-[10px] uppercase tracking-[0.14em] font-bold" style="color:var(--accent)">${cat}</span><span class="font-mono text-[10px] text-on-surface-variant ml-3">$${groupAnnual.toLocaleString()} / yr</span></td></tr>`;
-    items.forEach(it => {
-      const annual = (it.once || 0) + (it.monthly || 0) * 12;
-      html += `<tr class="border-t border-outline-variant/5 hover:bg-surface-container-low/40 transition-colors">
-        <td class="py-2.5 px-3 text-on-surface">${it.item}</td>
-        <td class="py-2.5 px-3 text-right font-mono ${it.once > 0 ? 'text-on-surface' : 'text-on-surface-variant/50'}">${it.once > 0 ? '$' + it.once.toLocaleString() : '—'}</td>
-        <td class="py-2.5 px-3 text-right font-mono ${it.monthly > 0 ? 'text-on-surface' : 'text-on-surface-variant/50'}">${it.monthly > 0 ? '$' + it.monthly.toLocaleString() : '—'}</td>
-        <td class="py-2.5 px-3 text-right font-mono font-semibold" style="color:var(--accent)">$${annual.toLocaleString()}</td>
-        <td class="py-2.5 px-3 text-on-surface-variant text-xs hidden md:table-cell">${it.note}</td>
-      </tr>`;
-    });
-  });
-  const grand = formationOnce + opsTotal;
-  html += `<tr class="border-t-2 border-[#8ff5ff]/40">
-    <td class="py-4 px-3 font-headline font-bold text-on-surface">Year 1 Total</td>
-    <td class="py-4 px-3 text-right font-mono font-bold text-on-surface">$${formationOnce.toLocaleString()}</td>
-    <td class="py-4 px-3 text-right font-mono text-on-surface-variant">—</td>
-    <td class="py-4 px-3 text-right font-mono font-bold text-2xl" style="color:var(--accent)">$${grand.toLocaleString()}</td>
-    <td class="py-4 px-3 text-xs text-on-surface-variant hidden md:table-cell">CA franchise tax waived year 1 for new LLCs</td>
-  </tr>`;
-  html += '</tbody></table>';
-  document.getElementById('formBudgetTable').innerHTML = html;
-
-  // Update header totals dynamically
-  document.getElementById('formTotalYear1').textContent = '$' + grand.toLocaleString();
-  document.getElementById('formTotalYear1').nextElementSibling.textContent =
-    `Formation $${formationOnce.toLocaleString()} · Operations $${opsTotal.toLocaleString()}`;
-}
-
-// Seed FORMWORK Plan from the formation roadmap.
-// Writes per-category × per-month totals straight into the `plan` object
-// (the data the grid + Sankey both read via planCell). Mirrors locally
-// before switching views so the grid renders instantly — no waiting on a
-// Firebase round-trip.
-function seedPlanFromFormation() {
-  if (!confirm('Seed the Plan grid with the year-1 formation budget? Existing manually-edited cells in the same months will be overwritten.')) return;
-
-  // ── Compute per-cat × per-month totals ─────────────────────────────────
-  // ONE-TIME line items (allocated to specific months):
-  //   M1: Articles 70, Name 10                                       → llc 80
-  //   M2: LA BTRC 200                                                → llc 200
-  //   M3: Statement of Information 20                                → llc 20
-  //   M1: Operating Agreement 1200 + IP 600                          → legal 1800
-  //   M2: Trademark 350                                              → legal 350
-  //   M1: Domains 150                                                → infra +150
-  //   M1: Logo 200                                                   → mkt +200
-  //   M2: Marketing site build 600                                   → mkt +600
-  //   M1: MacBook Pro 2800                                           → dev 2800
-  // RECURRING (every month):
-  //   ops:   GL 80 + EO 120 + QBO 90 + CPA 100 + Workspace 14
-  //          + Linear/Notion/Slack 60 + Buffer 250 = 714
-  //   infra: Cloudflare 25 + AI APIs 800 + GPU 200 = 1025
-  //   mkt:   Marketing site hosting 50 = 50
-  const cells = { llc:{}, legal:{}, infra:{}, dev:{}, mkt:{}, ops:{} };
-  const mk = i => monthKeyAt(i);
-
-  // One-time
-  cells.llc[mk(0)]   = 80;
-  cells.llc[mk(1)]   = 200;
-  cells.llc[mk(2)]   = 20;
-  cells.legal[mk(0)] = 1800;
-  cells.legal[mk(1)] = 350;
-  cells.dev[mk(0)]   = 2800;
-
-  // Recurring monthlies (M0..M11)
-  for (let i = 0; i < 12; i++) {
-    const k = mk(i);
-    cells.ops[k]   = (cells.ops[k]   || 0) + 714;
-    cells.infra[k] = (cells.infra[k] || 0) + 1025;
-    cells.mkt[k]   = (cells.mkt[k]   || 0) + 50;
-  }
-  // Inject one-time into recurring months
-  cells.infra[mk(0)] += 150;   // domains
-  cells.mkt[mk(0)]   += 200;   // logo
-  cells.mkt[mk(1)]   += 600;   // marketing site build
-
-  // ── Apply locally + write to Firebase ──────────────────────────────────
-  const writes = [];
-  Object.entries(cells).forEach(([catId, byMonth]) => {
-    if (!plan[catId]) plan[catId] = {};
-    Object.entries(byMonth).forEach(([monthKey, amount]) => {
-      const v = Math.round(amount);
-      plan[catId][monthKey] = v;
-      writes.push(fbSet(planPath() + '/' + catId + '/' + monthKey, v));
-    });
-  });
-
-  console.log('[FORMWORK seed] wrote', writes.length, 'plan cells. Local plan now:', JSON.parse(JSON.stringify(plan)));
-  toast('Seeded ' + writes.length + ' plan cells.', 'success');
-
-  // Force grid mode + switch to Plan view + render
-  planHorizonOffset = 0;
-  planView = 'grid';
-  try { localStorage.setItem('fw.planView', 'grid'); } catch (e) {}
-  switchView('plan');
-  // Render again on next tick after Firebase listener may fire
-  setTimeout(renderPlan, 50);
-  setTimeout(renderPlan, 600);
-}
-
-function renderFormationTimeline() {
-  const el = document.getElementById('formTimelineChart');
-  el.innerHTML = '';
-  // Build month-by-month cumulative spend
-  const months = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12'];
-  const monthlySpend = FORMATION_BUDGET.reduce((s, b) => s + (b.monthly || 0), 0);
-  const onceSpend   = FORMATION_BUDGET.reduce((s, b) => s + (b.once || 0), 0);
-  // Distribute one-time costs into M1 mostly (formation), some in M2 (license/insurance), small in M3
-  const onceSchedule = [0.65, 0.20, 0.10, 0.05, 0, 0, 0, 0, 0, 0, 0, 0];
-  const cumulative = [];
-  let running = 0;
-  months.forEach((m, i) => {
-    running += onceSpend * onceSchedule[i] + monthlySpend;
-    cumulative.push({ month: m, total: Math.round(running) });
-  });
-
-  const W = el.clientWidth || 800;
-  const H = 220;
-  const pad = { l: 60, r: 30, t: 20, b: 36 };
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width', W);
-  svg.setAttribute('height', H);
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-  const max = Math.max(...cumulative.map(c => c.total));
-  const xStep = (W - pad.l - pad.r) / (months.length - 1);
-  const y = v => pad.t + (H - pad.t - pad.b) * (1 - v / max);
-
-  // Gridlines
-  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
-    const yy = y(max * t);
-    const line = document.createElementNS(svgNS, 'line');
-    line.setAttribute('x1', pad.l); line.setAttribute('x2', W - pad.r);
-    line.setAttribute('y1', yy); line.setAttribute('y2', yy);
-    line.setAttribute('stroke', 'rgba(148,163,184,0.08)');
-    svg.appendChild(line);
-    const lbl = document.createElementNS(svgNS, 'text');
-    lbl.setAttribute('x', pad.l - 8); lbl.setAttribute('y', yy + 4);
-    lbl.setAttribute('text-anchor', 'end');
-    lbl.setAttribute('fill', '#a3abc0');
-    lbl.setAttribute('font-size', '10');
-    lbl.setAttribute('font-family', 'JetBrains Mono, monospace');
-    lbl.textContent = '$' + Math.round(max * t).toLocaleString();
-    svg.appendChild(lbl);
-  });
-
-  // Filled area
-  const areaPath = ['M', pad.l, H - pad.b];
-  cumulative.forEach((c, i) => areaPath.push('L', pad.l + i * xStep, y(c.total)));
-  areaPath.push('L', W - pad.r, H - pad.b, 'Z');
-  const area = document.createElementNS(svgNS, 'path');
-  area.setAttribute('d', areaPath.join(' '));
-  area.setAttribute('fill', 'url(#formAreaGrad)');
-  // Gradient
-  const defs = document.createElementNS(svgNS, 'defs');
-  defs.innerHTML = `<linearGradient id="formAreaGrad" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#8ff5ff" stop-opacity="0.45"/>
-    <stop offset="100%" stop-color="#8ff5ff" stop-opacity="0.02"/>
-  </linearGradient>`;
-  svg.appendChild(defs);
-  svg.appendChild(area);
-
-  // Line
-  const linePath = cumulative.map((c, i) => `${i === 0 ? 'M' : 'L'} ${pad.l + i * xStep} ${y(c.total)}`).join(' ');
-  const line = document.createElementNS(svgNS, 'path');
-  line.setAttribute('d', linePath);
-  line.setAttribute('fill', 'none');
-  line.setAttribute('stroke', '#8ff5ff');
-  line.setAttribute('stroke-width', '2.5');
-  line.setAttribute('stroke-linecap', 'round');
-  line.setAttribute('stroke-linejoin', 'round');
-  svg.appendChild(line);
-
-  // Dots + month labels
-  cumulative.forEach((c, i) => {
-    const x = pad.l + i * xStep;
-    const dot = document.createElementNS(svgNS, 'circle');
-    dot.setAttribute('cx', x); dot.setAttribute('cy', y(c.total));
-    dot.setAttribute('r', 3); dot.setAttribute('fill', '#8ff5ff');
-    svg.appendChild(dot);
-    const lbl = document.createElementNS(svgNS, 'text');
-    lbl.setAttribute('x', x); lbl.setAttribute('y', H - pad.b + 16);
-    lbl.setAttribute('text-anchor', 'middle');
-    lbl.setAttribute('fill', '#a3abc0');
-    lbl.setAttribute('font-size', '10');
-    lbl.setAttribute('font-family', 'JetBrains Mono, monospace');
-    lbl.textContent = c.month;
-    svg.appendChild(lbl);
-    if (i === cumulative.length - 1) {
-      const totalLabel = document.createElementNS(svgNS, 'text');
-      totalLabel.setAttribute('x', x); totalLabel.setAttribute('y', y(c.total) - 10);
-      totalLabel.setAttribute('text-anchor', 'end');
-      totalLabel.setAttribute('fill', '#dde5fb');
-      totalLabel.setAttribute('font-size', '13');
-      totalLabel.setAttribute('font-weight', '700');
-      totalLabel.setAttribute('font-family', 'Manrope, sans-serif');
-      totalLabel.textContent = '$' + c.total.toLocaleString();
-      svg.appendChild(totalLabel);
-    }
-  });
-
-  el.appendChild(svg);
-}
 window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (h && h !== currentView) switchView(h); });
 // Apply initial hash on boot
 (() => { const h = location.hash.slice(1); if (h && _VIEWS.includes(h)) setTimeout(() => switchView(h), 0); })();
@@ -1536,7 +1072,7 @@ fbListen('budget/settings', data => {
     const cEl = document.getElementById('sCompany');  if (cEl) cEl.value = settings.companyName || '';
     const curEl = document.getElementById('sCurrency'); if (curEl) curEl.value = settings.currency || 'USD';
     const sdEl = document.getElementById('sSeed');    if (sdEl) sdEl.value = settings.seedTarget || 1200000;
-    const fyEl = document.getElementById('sFiscal');  if (fyEl) fyEl.value = settings.fiscalYearStart || '2026-01';
+    const fyEl = document.getElementById('sFiscal');  if (fyEl) fyEl.value = settings.fiscalYearStart || '2026-06';
     const rmEl = document.getElementById('sReducedMotion'); if (rmEl) rmEl.checked = !!settings.reducedMotion;
     const nameEl = document.getElementById('sideCoName'); if (nameEl && settings.companyName) nameEl.textContent = settings.companyName;
     applyAccent(settings.accent || 'cyan');
@@ -1766,7 +1302,7 @@ function renderCatCards() {
 //  PLAN / OUTLOOK HELPERS
 // ════════════════════════════════════════
 function parseFiscalStart() {
-  const s = (settings.fiscalYearStart || '2026-01').slice(0, 7);
+  const s = (settings.fiscalYearStart || '2026-06').slice(0, 7);
   const [y, m] = s.split('-').map(Number);
   return { y, m: (m || 1) - 1 };
 }
