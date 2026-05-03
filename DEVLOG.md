@@ -1,5 +1,41 @@
 # FORMWORK Devlog
 
+## 2026-05-02 — AWS lock-in, year-1 budget reframed, planning artifacts archived
+
+**Cloud provider decision: AWS** (us-west-2 / Oregon). Locked in over GCP / Azure / Cloudflare for three reasons: (1) most large GCs are already AWS-approved vendors so security review is fastest, (2) shortest path to SOC 2 / FedRAMP for enterprise sales, (3) Bedrock keeps Claude available even if a customer demands a single-vendor procurement.
+
+### Year-1 budget shape (Jun '26 → May '27)
+- Fiscal year start flipped from `2026-01` to `2026-06`.
+- Plan auto-seeds on first load via `DEFAULT_PLAN` const (no more "seed FORMWORK" button).
+- 4-phase scaling structure: **Foundation $11,839 → Build $40,300 → Pilot $56,500 → Scale $72,800 = $181,739 / year.**
+- Heaviest categories: Development $92,800 (1 contractor Sep+, 2nd hire spring '27); Infrastructure $39,575 (AWS $15,350 + Anthropic $23,800 + misc $425).
+
+### Form LLC tab removed from app
+The interactive checklist + seed button were over-engineered for what's a one-time review document. Killed `v-formation`, `FORMATION_STEPS`, `FORMATION_BUDGET`, `renderFormation*`, `seedPlanFromFormation` — about 28 KB of code. The LLC formation plan now lives in a static PDF for sign-off (see Planning Artifacts below).
+
+### Planning artifacts (PDFs · `~/Documents/`)
+- **`OpenYap LLC Formation Plan.html`** — 12-step CA LLC roadmap + ownership table + signature lines.
+- **`OpenYap Storage & AI Cost Model.html`** — Procore-as-benchmark analysis (Procore 2025: $1.323B revenue / 80% GAAP margin → ~$15K COGS per avg customer → $80–200K/yr to serve a Webcor-class GC). Direct AWS hosting cost ~$70K/yr for a Webcor-class GC. AI analytics layer ~$181K/yr (Sonnet workhorse + Haiku routing + Opus risk runs, prompt caching + batching applied). OpenYap target ACV per tier — Webcor-class target $1.255M @ 80% gross margin.
+- **`OpenYap on AWS — Architecture & Rollout.html`** — Service map (9 lanes), 4-phase rollout with monthly cost tables, day-1 TODO list, reconciliation back to FORMWORK Plan tab.
+
+### CDK repo structure (committed to before first deploy)
+```
+~/openyap-infra/
+├── NetworkStack       VPC, subnets, NAT, VPC endpoints (S3/DDB/ECR/Logs)
+├── DataStack          S3 buckets (KMS+versioned), RDS Postgres + pgvector, Secrets
+├── EcsServiceStack    ALB, ECS cluster, Fargate services, alarms
+├── AuthStack          Cognito user pool, identity pool, hosted UI
+├── EventStack         EventBridge bus, SQS queues, Lambda subscribers
+├── ObservabilityStack CloudWatch dashboards, log groups, alarms, billing alerts
+└── SecurityStack      GuardDuty, Config rules, KMS keys
+```
+
+### Triggers to revisit the AWS plan
+- First $5K/mo AWS bill → architecture review
+- First enterprise pilot signed → multi-AZ flip, SOC 2 acceleration
+- Any single-month bill > 1.5× plan → root-cause within 48 h
+- 6 months before SOC 2 Type II target → freeze architecture, start evidence collection
+
 ## 2026-04-21 — Sankey Plan, scenarios, Cmd-K, health gauge, quieter skin
 
 A deeper overhaul aimed at "immersive, cleaner, more minimal, nicer animations and buttons" — and killing the Excel-grid feel of the Plan view. Same single-file deploy, same Firebase, no build step.
